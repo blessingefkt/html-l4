@@ -1,0 +1,12 @@
+/node_modules/
+/bower_components/
+/.idea/
+/.sass-cache/
+/.vagrant/
+/vendor
+composer.phar
+composer.lock
+.env.local.php
+.env.php
+.DS_Store
+Thumbs.db

@@ -1,0 +1,21 @@
+{
+    "name": "iyoworks/html",
+    "description": "HTML and Form Helpers",
+    "authors": [
+        {
+            "name": "blessing",
+            "email": "blessing@iyoworks.com"
+        }
+    ],
+    "require": {
+        "php": ">=5.4.0",
+        "iyoworks/support": "dev-master",
+        "illuminate/html": ">=4.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Iyoworks\\Html\\": "src/Html"
+        }
+    },
+    "minimum-stability": "stable"
+}
