@@ -1,7 +1,6 @@
 <?php namespace Iyoworks\Html;
 
 use Iyoworks\Html\Forms\Form;
-use Iyoworks\Html\Forms\FormElementRenderer;
 use Iyoworks\Html\Forms\LaravelFormRenderer;
 
 class HtmlServiceProvider extends \Illuminate\Html\HtmlServiceProvider {
