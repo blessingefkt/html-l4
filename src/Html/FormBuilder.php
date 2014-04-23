@@ -89,7 +89,7 @@ class FormBuilder extends \Illuminate\Html\FormBuilder {
         $properties['name'] = $name;
         $properties['label'] = $label;
         $properties['value'] = $value;
-        return Field::make($properties, [], $this->renderer);
+        return Field::make($properties, []);
     }
 
     public function urlSelect($label, $query, array $options, $baseUrl = null)

@@ -2,6 +2,7 @@
 
 use Iyoworks\Html\Forms\Form;
 use Iyoworks\Html\Forms\FormElementRenderer;
+use Iyoworks\Html\Forms\LaravelFormRenderer;
 
 class HtmlServiceProvider extends \Illuminate\Html\HtmlServiceProvider {
     public function boot()
@@ -45,7 +46,7 @@ class HtmlServiceProvider extends \Illuminate\Html\HtmlServiceProvider {
 
         $this->app->bindShared('form.renderer', function($app)
         {
-            return new FormElementRenderer($app['view'], '_form-field');
+            return new LaravelFormRenderer($app['request'], $app['session']->driver());
         });
 
     }
