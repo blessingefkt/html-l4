@@ -114,8 +114,8 @@ class Form extends Element {
      */
     public function submit($value = null, array $properties = null)
     {
-         $properties = array_merge(['rowable' => false, 'label' => false,
-             'attr' => ['class' => 'btn btn-primary']], $properties ?: []);
+        $properties = array_merge(['rowable' => false, 'label' => false,
+            'attr' => ['class' => 'btn btn-primary']], $properties ?: []);
         $button = $this->button('submit', $value, $properties);
         $button->setAttr('type', 'submit');
         $button->name = false;
@@ -257,18 +257,24 @@ class Form extends Element {
     /**
      * Run callbacks for fields or elements
      * @param $group
+     * @return int
      */
     public function runCallbacks($group)
     {
-        if (isset($this->callbacks[$group]))
-            foreach ($this->callbacks[$group] as $k => $callback)
-                foreach ($this->elements as $field)
-                {
-                    if ($field->elementType == $group)
-                        call_user_func($callback, $field);
-                }
+        $cnt = 0;
+        if (!isset($this->callbacks[$group])) return $cnt;
+        foreach ($this->callbacks[$group] as $callback)
         {
+            foreach ($this->elements as $elem)
+            {
+                if ($elem->elementType == $group)
+                {
+                    $cnt++;
+                    call_user_func($callback, $elem);
+                }
             }
+        }
+        return $cnt;
     }
 
     /**
