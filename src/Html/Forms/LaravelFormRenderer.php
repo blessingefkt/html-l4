@@ -1,28 +1,28 @@
 <?php namespace Iyoworks\Html\Forms;
 
-use Illuminate\Http\Request;
+use Illuminate\Events\Dispatcher;
 use Illuminate\Session\Store as Session;
 use Iyoworks\Support\Str;
 
 class LaravelFormRenderer extends BaseElementRenderer implements FormRendererInterface  {
     /**
-     * @var int
-     */
-    protected $maxColumns = 12;
-    protected $formFields = ['checkbox','file','hidden','password','radio','reset','submit','text'];
-    /**
      * @var Session
      */
     protected $session;
     /**
-     * @var Request
+     * @var \Illuminate\Events\Dispatcher
      */
-    protected $request;
+    protected $dispatcher;
+    /**
+     * @var array
+     */
+    protected $formFields = ['checkbox','file','hidden','password',
+        'radio','reset','submit','text', 'input'];
 
-    function __construct(Request $request, Session $session)
+    function __construct(Session $session = null, Dispatcher $dispatcher = null)
     {
-        $this->request = $request;
         $this->session = $session;
+        $this->dispatcher = $dispatcher;
     }
 
 
@@ -33,16 +33,23 @@ class LaravelFormRenderer extends BaseElementRenderer implements FormRendererInt
      */
     public function render(Element $element, $elementType)
     {
+        $this->fire('rendering', $elementType, $element);
         switch($elementType)
         {
             case 'field':
+                $this->fire('field.rendering', $element->type, $element);
                 $output = $this->makeFieldHTML($element);
+                break;
+            case 'form':
+                $output = $this->makeFormHTML($element);
                 break;
             default :
                 $output = $this->makeElementHTML($element);
         }
+        $this->fire('rendered', $elementType, $element);
 
-        foreach ($element->getAppendages('prepend') as $_elem) {
+        foreach ($element->getAppendages('prepend') as $_elem)
+        {
             $output = $_elem->html().PHP_EOL.$output;
         }
 
@@ -51,6 +58,11 @@ class LaravelFormRenderer extends BaseElementRenderer implements FormRendererInt
             $output .= PHP_EOL;
             foreach ($appendages as $_elem)
                 $output = $output.$_elem->html().PHP_EOL;
+        }
+
+        if ($element->container)
+        {
+            $output = $this->makeElementHTML($element->container, $output);
         }
         return $output;
     }
@@ -61,17 +73,19 @@ class LaravelFormRenderer extends BaseElementRenderer implements FormRendererInt
      */
     public function renderOpen(Form $form)
     {
-        $form->runCallbacks('form');
         $method = Str::lower($form->method ?: 'post');
-        $form->set('method', Str::upper($method));
+        $form->setAttr('method', Str::upper($method));
 
+        $methodField = null;
         if($method !== 'get' || $method !== 'post')
         {
-            $form->hidden('_method', $method, ['baseNames' => false]);
-            $form->set('method', 'POST');
+            $form->setAttr('method', 'POST');
+            $methodField = $form->hidden('_method', $method, ['baseNames' => false]);
+            $methodField .= PHP_EOL;
         }
-
-        return sprintf("<%s%s>\n", $form->tag(), $this->makeAttributeString($form));
+        $tag = sprintf("<%s%s>\n", $form->tag, $form->getAttributes());
+        $tag .= $methodField;
+        return $tag;
     }
 
     /**
@@ -81,9 +95,10 @@ class LaravelFormRenderer extends BaseElementRenderer implements FormRendererInt
     public function renderClose(Form $form)
     {
         $tail = null;
-        if ($form->csrfToken)
+        if ($form->csrfToken && isset($this->session))
         {
-            $tail = $form->hidden('_token', $this->session->token())->html();
+            $format = '<input type="hidden" name="%s" value="%s"></input>';
+            $tail .= sprintf($format, '_token', $this->session->token());
             $tail .= PHP_EOL;
         }
         return sprintf("%s</%s>\n", $tail, $form->tag());
@@ -95,45 +110,72 @@ class LaravelFormRenderer extends BaseElementRenderer implements FormRendererInt
      */
     protected function makeFieldHTML(Field $field)
     {
-        $field->set('name', $field->getProperty('name'));
-        $field->set('type', $field->getProperty('type'));
-        if ($multiple = $field->isProperty('multiple'))
-            $field->set('multiple', $multiple);
+        $field->setAttr('name', $field->name);
+        if (!$field->getAttr('type'))
+            $field->setAttr('type', $field->type);
 
-        $field->set('value', $this->getFieldValue($field->dotName(), $field->getProperty('value')));
-
-        if ($desc = $field->description)
+        if (!$field->ignoreDescription && $desc = $field->description)
         {
             $desc = Element::make(['slug' => 'description', 'value' => $desc], ['class' => 'field-description']);
             $field->append($desc);
         }
 
+        if (!$field->ignoreLabel && $label = $field->label)
+        {
+            $label = Element::make(['slug' => 'label', 'value' => $label, 'tag' => 'label'],
+                ['class' => 'field-label', 'for' => $field->name]);
+            $field->prepend($label);
+        }
+
+        $default = $field->value;
+        \Debug::log($field->getProperties());
+        $field->value = $this->getFieldValue($field->safeName(), $default);
+
         $this->setFieldErrorMessage($field);
 
-        $attributeStr = $this->makeAttributeString($field->toArray());
-
-        if (in_array($field->type, $this->formFields))
+        if ($field->type == 'select')
         {
-            $html = sprintf("<%s%s></%s>\n", $field->tag,$attributeStr, $field->tag);
+            $field->value  = $this->getSelectFieldOptions($field->options, $field->value);
+            $html = $this->makeElementHTML($field);
+        }
+        elseif (in_array($field->type, $this->formFields))
+        {
+            $field->setAttr('name', $field->name);
+            $field->setAttr('value', $field->value);
+            $html = sprintf("<%s%s></%s>", $field->tag, $field->getAttributes(), $field->tag);
         }
         else
-            $html = $this->makeElementHTML($field);
-
-        if ($container = $field->container)
         {
-            if (is_array($container))
-            {
-                return $this->makeElementHTML(Element::make(['value' => $html], $container));
-            }
-            return $this->makeElementHTML($field->container, $html);
+            $html = $this->makeElementHTML($field);
         }
         return $html;
     }
 
+    /**
+     * @param Form $form
+     * @param null $html
+     * @return string
+     */
+    protected function makeFormHTML(Form $form, $html = null)
+    {
+        if (is_null($html))
+            $html = value($form->value);
+        return $form->open().PHP_EOL.$html.PHP_EOL.$form->close();
+    }
+
+    /**
+     * @param Element $element
+     * @param null $html
+     * @return string
+     */
     protected function makeElementHTML(Element $element, $html = null)
     {
+        if (is_null($html))
+            $html = $element->value;
+        $html = value($html);
+
         return sprintf("<%s%s>\n%s\n</%s>\n",
-            $element->tag(), $element->getAttributes(), $html ?: value($element->value), $element->tag());
+            $element->tag, $element->getAttributes(), $html, $element->tag);
     }
 
     /**
@@ -141,17 +183,21 @@ class LaravelFormRenderer extends BaseElementRenderer implements FormRendererInt
      */
     protected function setFieldErrorMessage(Field $field)
     {
-        if ($this->session->has('errors')) {
-            $errors = $this->session->get('errors');
-            $_name = $field->slug;
-            if (!$found = $errors->has($_name)) {
-                if ($_name = $field->dotName())
-                    $found = $errors->has($_name);
-            }
-            if ($found) {
-                $errElem = $field->append(Element::make(['slug' => 'errMsg'], ['class' => 'has-error']));
-                $errElem->value = $errors->first($_name);
-            }
+        if (!isset($this->session) || !$this->session->has('errors'))
+            return;
+        $errors = $this->session->get('errors');
+        $_name = $field->slug;
+        if (!$found = $errors->has($_name))
+        {
+            if ($_name = $field->safeName())
+                $found = $errors->has($_name);
+        }
+        if ($found)
+        {
+            $errElem = $field->append(Element::make(['slug' => 'errMsg'], ['class' => 'error-msg']));
+            $errElem->value = $errors->first($_name);
+            if ($field->container)
+                $field->container->addClass('has-error');
         }
     }
 
@@ -162,10 +208,55 @@ class LaravelFormRenderer extends BaseElementRenderer implements FormRendererInt
      */
     public function getFieldValue($name, $default = null)
     {
-        if ($this->session->has($name))
-            return $this->session->get($name);
-        if ($this->request->has($name))
-            return $this->request->input($name);
-        return value($default);
+        if (is_null($name) || !isset($this->session))
+            return value($default);
+        $result = $this->session->getOldInput($name);
+        if (is_null($result))
+        {
+            $result = $this->session->get($name, $default);
+        }
+        return value($result ?: $default);
     }
+
+    public function fire($action, $type, $element)
+    {
+        if ($this->dispatcher)
+        {
+            $event = "form.{$action}:{$type}";
+            $this->dispatcher->fire($event, [$element]);
+        }
+    }
+
+    /**
+     * @param \Illuminate\Session\Store $session
+     */
+    public function setSession($session)
+    {
+        $this->session = $session;
+    }
+
+    /**
+     * @return \Illuminate\Session\Store
+     */
+    public function getSession()
+    {
+        return $this->session;
+    }
+
+    /**
+     * @param \Illuminate\Events\Dispatcher $dispatcher
+     */
+    public function setDispatcher($dispatcher)
+    {
+        $this->dispatcher = $dispatcher;
+    }
+
+    /**
+     * @return \Illuminate\Events\Dispatcher
+     */
+    public function getDispatcher()
+    {
+        return $this->dispatcher;
+    }
+
 }

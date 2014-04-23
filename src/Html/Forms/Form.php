@@ -2,6 +2,22 @@
 
 use Illuminate\Support\Collection;
 
+/**
+ * Class Form
+ * @package Iyoworks\Html\Forms
+ * @method Field text() 	text(string $slug, string $value = null, array $properties = null)
+ * @method Field textarea() 	textarea(string $slug, string $value = null, array $properties = null)
+ * @method Field label() 	label(string $slug, string $value = null, array $properties = null)
+ * @method Field fieldset() 	fieldset(string $slug, string $value = null, array $properties = null)
+ * @method Field legend() 	legend(string $slug, string $value = null, array $properties = null)
+ * @method Field select() 	select(string $slug, string $value = null, array $properties = null)
+ * @method Field optgroup() 	optgroup(string $slug, string $value = null, array $properties = null)
+ * @method Field option() 	option(string $slug, string $value = null, array $properties = null)
+ * @method Field button() 	button(string $slug, string $value = null, array $properties = null)
+ * @method Field datalist() 	datalist(string $slug, string $value = null, array $properties = null)
+ * @method Field keygen() 	keygen(string $slug, string $value = null, array $properties = null)
+ * @method Field output() 	output(string $slug, string $value = null, array $properties = null)
+ */
 class Form extends Element {
     protected static $macros = [];
     /**
@@ -21,10 +37,8 @@ class Form extends Element {
      */
     protected $callbacks = ['form' => [], 'fields' => [], 'elements' => []];
 
-    protected $defaultElementProperties = [
-        'hidden' => [ 'rowable' => false,
-            'container' => false,
-            'label' => false],
+    protected $defaultElementTypes = [
+        'text' => ['type' => 'text'],
         'textarea' => ['tag' => 'textarea'],
         'label' => ['tag' => 'label'],
         'fieldset' => ['tag' => 'fieldset'],
@@ -32,7 +46,7 @@ class Form extends Element {
         'select' => ['tag' => 'select'],
         'optgroup' => ['tag' => 'optgroup'],
         'option' => ['tag' => 'option'],
-        'button' => ['tag' => 'button'],
+        'button' => ['tag' => 'button', 'class' => 'btn'],
         'datalist' => ['tag' => 'datalist'],
         'keygen' => ['tag' => 'keygen'],
         'output' => ['tag' => 'output'],
@@ -46,7 +60,8 @@ class Form extends Element {
         'maxColumns' => 12,
         'rowClass' => 'col-md-',
         'baseFieldName' => null,
-        'rowAttributes' => ['class' => 'field-row row']
+        'rowAttributes' => ['class' => 'field-row row'],
+        'fieldAttributes' => []
     ];
 
     /**
@@ -85,13 +100,39 @@ class Form extends Element {
      * @param array $properties
      * @return Field
      */
-    public function input($type, $slug, $value = null, array $properties = [])
+    public function input($type, $slug, $value = null, array $properties = null)
     {
-        $defaults = array_get($this->defaultElementProperties, $type, []);
-        $properties = array_merge($defaults, $properties);
-        $properties['slug'] = $slug;
         $properties['value'] = $value;
+        $properties['type'] = $type;
         return $this->add($slug, $properties);
+    }
+
+    /**
+     * @param $value
+     * @param array $properties
+     * @return Field
+     */
+    public function submit($value = null, array $properties = null)
+    {
+         $properties = array_merge(['rowable' => false, 'label' => false,
+             'attr' => ['class' => 'btn btn-primary']], $properties ?: []);
+        $button = $this->button('submit', $value, $properties);
+        $button->setAttr('type', 'submit');
+        $button->name = false;
+        return $button;
+    }
+
+    /**
+     * @param $slug
+     * @param $value
+     * @param array $properties
+     * @return Field
+     */
+    public function hidden($slug, $value = null, array $properties = null)
+    {
+        $properties = array_merge(['rowable' => false, 'label' => false, 'container' => false],
+            $properties ?: []);
+        return $this->input('hidden', $slug, $value, $properties);
     }
 
     /**
@@ -100,7 +141,7 @@ class Form extends Element {
      * @param array $attributes
      * @return Field
      */
-    public function add($slug, $properties = [],  $attributes = [])
+    public function add($slug, $properties = null,  $attributes = null)
     {
         return $this->addField($slug, $properties, $attributes);
     }
@@ -111,9 +152,15 @@ class Form extends Element {
      * @param array $attributes
      * @return Field
      */
-    public function addField($slug, $properties = [],  $attributes = [])
+    public function addField($slug, $properties = null,  $attributes = null)
     {
         $properties['slug'] = $slug;
+        if ($type = array_get($properties, 'type'))
+        {
+            $defaults = array_get($this->defaultElementTypes, $type, []);
+            $defaults['type'] = $type;
+            $properties = array_merge($defaults, $properties ?: []);
+        }
         $field = $this->makeField($properties, $attributes);
         return $this->addElement($field, $slug);
     }
@@ -123,9 +170,10 @@ class Form extends Element {
      * @param array $attributes
      * @return Field
      */
-    protected function makeField($properties, $attributes)
+    protected function makeField(array $properties = null, array $attributes = null)
     {
-        $field = Field::make($properties, $attributes, $this->renderer);
+        $field = Field::make($properties ?: [], $this->fieldAttributes, $this->renderer);
+        if($attributes) $field->mergeAttrs($attributes);
         return $field;
     }
 
@@ -139,7 +187,7 @@ class Form extends Element {
         if ($atts = array_get($element->getProperties(), 'attr'))
         {
             $attributes = array_merge($element->toArray(), $atts);
-            $element->fill($attributes);
+            $element->mergeAttrs($attributes);
             $element->removeProperty('attr');
         }
 
@@ -214,12 +262,12 @@ class Form extends Element {
     {
         if (isset($this->callbacks[$group]))
             foreach ($this->callbacks[$group] as $k => $callback)
-            {
                 foreach ($this->elements as $field)
                 {
-                    if (Str::plural($field->elementType) == $group)
+                    if ($field->elementType == $group)
                         call_user_func($callback, $field);
                 }
+        {
             }
     }
 
@@ -248,8 +296,8 @@ class Form extends Element {
      */
     public function onGetValue()
     {
-        $this->runCallbacks('fields');
-        $this->runCallbacks('elements');
+        $this->runCallbacks('field');
+        $this->runCallbacks('element');
         $formStr = [];
         foreach ($this->getRowableElements() as $row)
         {
@@ -326,9 +374,19 @@ class Form extends Element {
      * @param $callable
      * @return $this
      */
+    public function onRenderForm($callable)
+    {
+        $this->callbacks['form'][] = $callable;
+        return $this;
+    }
+
+    /**
+     * @param $callable
+     * @return $this
+     */
     public function onRenderField($callable)
     {
-        $this->callbacks['fields'][] = $callable;
+        $this->callbacks['field'][] = $callable;
         return $this;
     }
 
@@ -338,7 +396,7 @@ class Form extends Element {
      */
     public function onRenderElement($callable)
     {
-        $this->callbacks['elements'][] = $callable;
+        $this->callbacks['element'][] = $callable;
         return $this;
     }
 
@@ -351,7 +409,7 @@ class Form extends Element {
     {
         $callable = static::$macros[$name];
         $parameters[] = $this;
-        return call_user_func_array($callable, $parameters);
+        call_user_func_array($callable, $parameters);
     }
 
     /**
@@ -371,11 +429,13 @@ class Form extends Element {
      */
     public function __call($method, $parameters)
     {
-        if ($this->isProperty($method))
-            return parent::__call($method, $parameters);
         if(static::isMacro($method))
             return $this->useMacro($method, $parameters);
-        array_unshift($parameters, $method);
-        return call_user_func_array([$this, 'input'], $parameters);
+        if(isset($this->defaultElementTypes[$method]))
+        {
+            array_unshift($parameters, $method);
+            return call_user_func_array([$this, 'input'], $parameters);
+        }
+        return parent::__call($method, $parameters);
     }
 }

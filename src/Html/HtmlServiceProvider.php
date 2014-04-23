@@ -45,7 +45,7 @@ class HtmlServiceProvider extends \Illuminate\Html\HtmlServiceProvider {
 
         $this->app->bindShared('form.renderer', function($app)
         {
-            return new LaravelFormRenderer($app['request'], $app['session']->driver());
+            return new LaravelFormRenderer($app['session']->driver(), $app['events']);
         });
 
     }

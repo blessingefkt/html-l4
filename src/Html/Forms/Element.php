@@ -1,13 +1,13 @@
 <?php namespace Iyoworks\Html\Forms;
 
-use Illuminate\Support\Fluent;
+use Illuminate\Support\Contracts\ArrayableInterface;
 use Iyoworks\Support\Str;
 
 /**
  * Class Element
  * @package Iyoworks\Html\Forms
  */
-class Element extends Fluent {
+class Element implements ArrayableInterface {
 
     /**
      * @var ElementRendererInterface
@@ -24,15 +24,11 @@ class Element extends Fluent {
     /**
      * @var array
      */
-    protected static $defaultProperties = ['tag' => 'div', 'value' => null, 'field' => false];
+    protected static $defaultProperties = ['tag' => 'div', 'value' => null];
     /**
      * @var array
      */
-    protected $properties = [];
-    /**
-     * @var array
-     */
-    protected $elementProperties = [];
+    protected $properties = ['tag'];
     /**
      * @var array|Element[][]
      */
@@ -41,6 +37,10 @@ class Element extends Fluent {
      * @var ElementRendererInterface
      */
     protected $renderer;
+    /**
+     * @var array
+     */
+    protected $attributes = [];
 
     /**
      * @param array $properties
@@ -51,7 +51,7 @@ class Element extends Fluent {
                                 ElementRendererInterface $renderer = null)
     {
         $this->setProperties(array_merge($this->getDefaultProperties(), $properties));
-        $this->fill($attributes);
+        $this->mergeAttrs($attributes);
         $this->renderer = $renderer ?: static::getFieldRenderer();
     }
 
@@ -92,7 +92,11 @@ class Element extends Fluent {
      */
     public function prepend($properties = [], $attributes = [])
     {
-        $element = $this->newInstance($properties, $attributes);
+        if (!$properties instanceof Element) {
+            $element = $this->newInstance($properties, $attributes);
+        }
+        else
+            $element = $properties;
         $this->addAppendage('prepend', $element);
         return $element;
     }
@@ -104,7 +108,11 @@ class Element extends Fluent {
      */
     public function append($properties = [], $attributes = [])
     {
-        $element = $this->newInstance($properties, $attributes);
+        if (!$properties instanceof Element) {
+            $element = $this->newInstance($properties, $attributes);
+        }
+        else
+            $element = $properties;
         $this->addAppendage('append', $element);
         return $element;
     }
@@ -116,12 +124,7 @@ class Element extends Fluent {
      */
     public function newInstance($properties = [], $attributes = [])
     {
-        if (!$properties instanceof Element) {
-            $element = static::make($properties, $attributes, $this->renderer);
-        } else {
-            $element = $properties;
-        }
-        return $element;
+        return new Element($properties, $attributes, $this->renderer);
     }
 
     /**
@@ -131,7 +134,7 @@ class Element extends Fluent {
      */
     protected function addAppendage($string, $element)
     {
-        $this->appendages[$string] = $element;
+        $this->appendages[$string][] = $element;
     }
 
     /**
@@ -145,11 +148,64 @@ class Element extends Fluent {
     }
 
     /**
+     * Get an attribute from the container.
+     *
+     * @param  string  $key
+     * @param  mixed   $default
+     * @return mixed
+     */
+    public function get($key, $default = null)
+    {
+        if ($this->isProperty($key))
+            $value = $this->getProperty($key, $default);
+        else
+            $value = $this->getAttr($key, $default);
+
+        if (method_exists($this, $method = 'onGet'.Str::studly($key)))
+            return $this->{$method}($value);
+
+        return $value;
+    }
+
+    /**
+     * @param $key
+     * @param null $default
+     * @return mixed
+     */
+    public function getAttr($key, $default = null)
+    {
+        if (array_key_exists($key, $this->attributes))
+            $value = $this->attributes[$key];
+        else
+            $value = $default;
+        return value($value);
+    }
+
+    /**
      * @param $key
      * @param $value
      * @return $this
      */
     public function set($key, $value)
+    {
+        if (method_exists($this, $method = 'onSet'.Str::studly($key)))
+            $this->{$method}($value);
+        else
+        {
+            if ($this->isProperty($key))
+                $this->setProperty($key, $value);
+            else
+                $this->setAttr($key, $value);
+        }
+        return $this;
+    }
+
+    /**
+     * @param $key
+     * @param $value
+     * @return $this
+     */
+    public function setAttr($key, $value)
     {
         $this->attributes[$key] = $value;
         return $this;
@@ -161,7 +217,18 @@ class Element extends Fluent {
      */
     public function addClass($class)
     {
-        $this->attributes['class'] = trim($this->get('class').' '.$class);
+        if (is_array($class))
+        {
+            array_map([$this, 'addClass'], $class);
+        }
+        else
+        {
+            $classes = (array) array_get($this->attributes, 'class', []);
+            if (!is_array($class))
+                $class = explode(' ', $class);
+            $classes = array_merge($classes, $class);
+            $this->attributes['class'] = array_unique($classes);
+        }
         return $this;
     }
 
@@ -171,10 +238,18 @@ class Element extends Fluent {
      */
     public function removeClass($class)
     {
-        $classes = array_get($this->attributes, 'class', null);
-        if ($classes)
+        if (is_array($class))
         {
-            $this->attributes['class'] = str_replace(trim($class), '', $classes);
+            array_map([$this, 'removeClass'], $class);
+        }
+        else
+        {
+            $classes = (array) array_get($this->attributes, 'class', []);
+            if ($key = array_search($class, $classes))
+            {
+                unset($classes[$key]);
+            }
+            $this->attributes['class'] = $classes;
         }
         return $this;
     }
@@ -186,6 +261,16 @@ class Element extends Fluent {
     public function fill(array $array)
     {
         $this->attributes = $array;
+        return $this;
+    }
+
+    /**
+     * @param array $array
+     * @return $this
+     */
+    public function mergeAttrs(array $array)
+    {
+        $this->attributes = array_merge_recursive($this->attributes, $array);
         return $this;
     }
 
@@ -244,24 +329,6 @@ class Element extends Fluent {
      */
     public function setProperty($name, $value)
     {
-        if (in_array($name, $this->elementProperties))
-        {
-            if ($value !== false)
-            {
-                if (! ($value instanceof Element))
-                {
-                    $element = $this->getProperty($name, new Element($this->renderer));
-                    $value = $element->value($value);
-                }
-            }
-            else
-            {
-                $this->removeProperty($name);
-                return $this;
-            }
-        }
-        if (method_exists($this, $method = 'onSet'.Str::studly($name)))
-            $value = $this->{$method}($value);
         $this->properties[$name] = $value;
         return $this;
     }
@@ -274,9 +341,7 @@ class Element extends Fluent {
     {
         if (!$this->hasProperty($name)) return $default;
         $value = $this->properties[$name];
-        if (method_exists($this, $method = 'onGet'.Str::studly($name)))
-            $value = $this->{$method}($value);
-        return $value;
+        return value($value);
     }
 
     /**
@@ -310,6 +375,17 @@ class Element extends Fluent {
     }
 
     /**
+     * Get the instance as an array.
+     *
+     * @return array
+     */
+    public function toArray()
+    {
+        return $this->attributes;
+    }
+
+
+    /**
      * Dynamically retrieve the value of an attribute.
      *
      * @param  string  $key
@@ -317,8 +393,6 @@ class Element extends Fluent {
      */
     public function __get($key)
     {
-        if ($this->isProperty($key))
-            return $this->getProperty($key);
         return $this->get($key);
     }
 
@@ -334,7 +408,7 @@ class Element extends Fluent {
         if ($this->isProperty($key))
             $this->setProperty($key, $value);
         else
-            $this->set($key, $value);
+            $this->setAttr($key, $value);
     }
 
     /**
@@ -346,17 +420,12 @@ class Element extends Fluent {
      */
     public function __call($method, $parameters)
     {
-        if ($this->isProperty($method))
+        if (count($parameters) > 0)
         {
-            $isSetterCall = count($parameters) > 0 && $parameters[0] !== '';
-            if ($isSetterCall)
-                $this->setProperty($method, $parameters[0]);
-            else
-                return $this->getProperty($method);
+            $this->set($method, $parameters[0]);
+            return $this;
         }
-        else
-            $this->attributes[$method] = count($parameters) > 0 ? $parameters[0] : true;
-        return $this;
+        return $this->get($method);
     }
 
     /**

@@ -1,25 +1,32 @@
 <?php namespace Iyoworks\Html\Forms;
 
 class Field extends ContainedElement {
-    protected $elementType = 'field';
+    public $elementType = 'field';
+    protected static $defaultProperties = ['tag' => 'input',
+        'type' => 'input', 'value' => null];
+    protected $attributes = ['class' => ['form-field']];
     protected $properties = [
-        'tag' => 'input',
         'name' => null,
         'slug' => null,
         'rowable' => true,
-        'type' => 'text',
         'rules' => '',
         'options' => [],
         'variables' => [],
         'description' => null,
-        'multiple' => false,
         'baseNames' => [],
         'label' => null,
         'ignoreLabel' => false,
-        'ignoreDescription' => false
+        'ignoreDescription' => false,
+        'container' => null
     ];
 
-    protected $elementProperties = ['label', 'container'];
+    public function __construct(array $properties = array(), array $attributes = array(),
+                                ElementRendererInterface $renderer = null)
+    {
+        $this->properties['container'] = Element::make()->addClass('form-group');
+        $this->renderCallback = array_pull($properties, 'onRender', $this->renderCallback);
+        parent::__construct($properties, $attributes, $renderer);
+    }
 
 
     /**
@@ -42,42 +49,27 @@ class Field extends ContainedElement {
     }
 
     /**
-     * @param Element $label
-     * @return Element
-     */
-    protected function onGetLabel($label)
-    {
-        $label->for = $this->name;
-        return $label;
-    }
-
-    /**
-     * @param Element $label
-     * @return Element
-     */
-    protected function onSetLabel($label)
-    {
-        $label->tag = 'label';
-        return $label;
-    }
-
-    /**
      * @param $value
      * @return string
      */
     public function onGetName($value)
     {
-        return $this->makeFieldName($value, $this->getProperty('baseNames'), $this->muliple);
+        if ($value === false)
+            return null;
+        if (is_null($value))
+            $value = $this->getProperty('slug');
+        $baseNames = $this->getProperty('baseNames');
+        if ($baseNames !== false)
+            $value = $this->makeFieldName($value, $this->getProperty('baseNames'), $this->muliple);
+        return $value;
     }
 
     /**
-     * @return bool|mixed
+     * @return mixed
      */
-    public function dotName()
+    public function safeName()
     {
-        if ($name = $this->name)
-            return str_replace(['[', ']'], ['.', ''], $name);
-        return false;
+        return str_replace(array('.', '[]', '[', ']'), array('_', '', '.', ''), $this->name);
     }
 
     /**

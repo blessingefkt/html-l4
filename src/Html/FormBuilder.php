@@ -78,16 +78,15 @@ class FormBuilder extends \Illuminate\Html\FormBuilder {
 
     /**
      * @param $name
-     * @param null $label
      * @param null $value
      * @param array $properties
+     * @internal param null $label
      * @return \Iyoworks\Html\Forms\Field
      */
-    public function field($name, $label = null, $value = null, array $properties = [])
+    public function field($name, $value = null, array $properties = [])
     {
         $properties['slug'] = $name;
         $properties['name'] = $name;
-        $properties['label'] = $label;
         $properties['value'] = $value;
         return Field::make($properties, []);
     }
