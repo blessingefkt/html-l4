@@ -3,31 +3,145 @@
 use Illuminate\Support\Fluent;
 use Iyoworks\Support\Str;
 
+/**
+ * Class Element
+ * @package Iyoworks\Html\Forms
+ */
 class Element extends Fluent {
+
+    /**
+     * @var ElementRendererInterface
+     */
+    protected static $fieldRenderer;
+    /**
+     * @var callable
+     */
+    protected $renderCallback;
+    /**
+     * @var string
+     */
+    public $elementType = 'element';
+    /**
+     * @var array
+     */
     protected static $defaultProperties = ['tag' => 'div', 'value' => null, 'field' => false];
+    /**
+     * @var array
+     */
     protected $properties = [];
+    /**
+     * @var array
+     */
     protected $elementProperties = [];
     /**
-     * @var RendererInterface
+     * @var array|Element[][]
+     */
+    protected $appendages = [];
+    /**
+     * @var ElementRendererInterface
      */
     protected $renderer;
 
-    function __construct(RendererInterface $renderer, array $properties = array(), array $attributes = array())
+    /**
+     * @param array $properties
+     * @param array $attributes
+     * @param ElementRendererInterface $renderer
+     */
+    public function __construct(array $properties = array(), array $attributes = array(),
+                                ElementRendererInterface $renderer = null)
     {
-        $this->renderer = $renderer;
         $this->setProperties(array_merge($this->getDefaultProperties(), $properties));
         $this->fill($attributes);
+        $this->renderer = $renderer ?: static::getFieldRenderer();
+    }
+
+    /**
+     * @param \Iyoworks\Html\Forms\ElementRendererInterface $fieldRenderer
+     */
+    public static function setFieldRenderer(ElementRendererInterface $fieldRenderer)
+    {
+        self::$fieldRenderer = $fieldRenderer;
+    }
+
+    /**
+     * @throws \UnexpectedValueException
+     * @return \Iyoworks\Html\Forms\ElementRendererInterface
+     */
+    public static function getFieldRenderer()
+    {
+        if (!self::$fieldRenderer)
+            throw new \UnexpectedValueException('An an instance of \Iyoworks\Html\RendererInterface was expected');
+        return self::$fieldRenderer;
     }
 
     /**
      * @param array $properties
      * @param array $attributes
-     * @param \Iyoworks\Html\Forms\RendererInterface $renderer
+     * @param \Iyoworks\Html\Forms\ElementRendererInterface $renderer
      * @return Element|static
      */
     public static function make(array $properties = [], array $attributes = [], $renderer = null)
     {
-        return new static($renderer ?: static::getFieldRenderer(), $properties,  $attributes);
+        return new static($properties,  $attributes, $renderer);
+    }
+
+    /**
+     * @param Element|array $properties
+     * @param array $attributes
+     * @return Element
+     */
+    public function prepend($properties = [], $attributes = [])
+    {
+        $element = $this->newInstance($properties, $attributes);
+        $this->addAppendage('prepend', $element);
+        return $element;
+    }
+
+    /**
+     * @param Element|array $properties
+     * @param array $attributes
+     * @return Element
+     */
+    public function append($properties = [], $attributes = [])
+    {
+        $element = $this->newInstance($properties, $attributes);
+        $this->addAppendage('append', $element);
+        return $element;
+    }
+
+    /**
+     * @param \Iyoworks\Html\Forms\Element|array $properties
+     * @param $attributes
+     * @return Element
+     */
+    public function newInstance($properties = [], $attributes = [])
+    {
+        if (!$properties instanceof Element) {
+            $element = static::make($properties, $attributes, $this->renderer);
+        } else {
+            $element = $properties;
+        }
+        return $element;
+    }
+
+    /**
+     * Add an element as an appendage
+     * @param $string
+     * @param $element
+     */
+    protected function addAppendage($string, $element)
+    {
+        $this->appendages[$string] = $element;
+    }
+
+    /**
+     * @param string $group
+     * @return array|Element[]
+     */
+    public function getAppendages($group = null)
+    {
+        if($group) return array_get($this->appendages, $group, []);
+        return $this->appendages;
     }
 
     /**
@@ -84,6 +198,19 @@ class Element extends Fluent {
         return isset($this->attributes[$key]);
     }
 
+    /**
+     * @param $key
+     * @return bool
+     */
+    public function isProperty($key)
+    {
+        return array_key_exists($key, $this->properties);
+    }
+
+    /**
+     * @param $key
+     * @return bool
+     */
     public function hasProperty($key)
     {
         return isset($this->properties[$key]);
@@ -94,24 +221,7 @@ class Element extends Fluent {
      */
     public function getAttributes()
     {
-        return \HTML::attributes($this->toArray());
-    }
-
-    public function setProperty($name, $value)
-    {
-        if (in_array($name, $this->elementProperties))
-        {
-            if ($value !== false)
-            {
-                if (! ($value instanceof Element))
-                {
-                    $element = $this->getProperty($name, new Element($this->renderer));
-                    $value = $element->value($value);
-                }
-            }
-        }
-        $this->properties[$name] = $value;
-        return $this;
+        return $this->renderer->makeAttributeString($this->attributes);
     }
 
     /**
@@ -129,6 +239,34 @@ class Element extends Fluent {
 
     /**
      * @param $name
+     * @param $value
+     * @return $this
+     */
+    public function setProperty($name, $value)
+    {
+        if (in_array($name, $this->elementProperties))
+        {
+            if ($value !== false)
+            {
+                if (! ($value instanceof Element))
+                {
+                    $element = $this->getProperty($name, new Element($this->renderer));
+                    $value = $element->value($value);
+                }
+            }
+            else
+            {
+                $this->removeProperty($name);
+                return $this;
+            }
+        }
+        if (method_exists($this, $method = 'onSet'.Str::studly($name)))
+            $value = $this->{$method}($value);
+        $this->properties[$name] = $value;
+        return $this;
+    }
+    /**
+     * @param $name
      * @param mixed $default
      * @return mixed
      */
@@ -142,12 +280,33 @@ class Element extends Fluent {
     }
 
     /**
-     * @param $key
-     * @return bool
+     * @param $name
+     * @return $this
      */
-    public function isProperty($key)
+    public function removeProperty($name)
     {
-        return array_key_exists($key, $this->properties);
+        unset($this->properties[$name]);
+        return $this;
+    }
+
+    /**
+     * @param $callable
+     * @return $this
+     */
+    public function onRender($callable)
+    {
+        $this->renderCallback = $callable;
+        return $this;
+    }
+
+    /**
+     * @return string
+     */
+    public function html()
+    {
+        if ($this->renderCallback)
+            call_user_func($this->renderCallback, $this);
+        return $this->renderer->render($this, $this->elementType);
     }
 
     /**
@@ -200,26 +359,17 @@ class Element extends Fluent {
         return $this;
     }
 
-    public function render()
-    {
-        if($this->field)
-        {
-            $this->attributes['value'] = $this->getProperty('value');
-            $this->attributes['type'] = $this->getProperty('type');
-            if ($this->multiple)
-            {
-                $this->attributes['multiple'] = 'multiple';
-                unset($this->attributes['value']);
-            }
-        }
-        return $this->renderer->renderElement($this);
-    }
-
+    /**
+     * @return string
+     */
     public function __toString()
     {
-        return $this->render();
+        return $this->html();
     }
 
+    /**
+     * @return array
+     */
     protected function getDefaultProperties()
     {
         return array_merge(static::$defaultProperties, $this->properties);

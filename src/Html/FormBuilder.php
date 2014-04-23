@@ -3,7 +3,7 @@
 
 use Illuminate\Routing\UrlGenerator;
 use Iyoworks\Html\Forms\Field;
-use Iyoworks\Html\Forms\RendererInterface;
+use Iyoworks\Html\Forms\ElementRendererInterface;
 
 class FormBuilder extends \Illuminate\Html\FormBuilder {
 
@@ -12,11 +12,11 @@ class FormBuilder extends \Illuminate\Html\FormBuilder {
      */
     protected $html;
     /**
-     * @var RendererInterface
+     * @var ElementRendererInterface
      */
     private $renderer;
 
-    public function __construct(RendererInterface $renderer, HtmlBuilder $html, UrlGenerator $url, $csrfToken)
+    public function __construct(ElementRendererInterface $renderer, HtmlBuilder $html, UrlGenerator $url, $csrfToken)
     {
         parent::__construct($html, $url, $csrfToken);
         $this->renderer = $renderer;

@@ -1,8 +1,9 @@
 <?php namespace Iyoworks\Html\Forms;
 
 class Field extends ContainedElement {
-    protected $renderCallback;
+    protected $elementType = 'field';
     protected $properties = [
+        'tag' => 'input',
         'name' => null,
         'slug' => null,
         'rowable' => true,
@@ -20,12 +21,6 @@ class Field extends ContainedElement {
 
     protected $elementProperties = ['label', 'container'];
 
-    public function __construct($renderer, array $properties = array(), array $attributes = array())
-    {
-        $label = array_pull($properties, 'label', array_get($properties, 'slug'));
-        $this->setProperty('label', new Element($renderer, ['tag' => 'label', 'value' => $label]));
-        parent::__construct($renderer, $properties, $attributes);
-    }
 
     /**
      * @param mixed $value
@@ -47,56 +42,56 @@ class Field extends ContainedElement {
     }
 
     /**
-     * @return string
+     * @param Element $label
+     * @return Element
      */
-    public function render()
-    {
-        if ($this->renderCallback)
-            call_user_func($this->renderCallback, $this);
-
-        if (!$this->name)
-        {
-            $this->name = $this->makeFieldName();
-            $this->attributes['name'] = $this->name;
-        }
-        return parent::render($this);
-    }
-
-    /**
-     * @param $callable
-     * @return $this
-     */
-    public function onRender($callable)
-    {
-        $this->renderCallback = $callable;
-        return $this;
-    }
-
-    protected function wrapImplode($array, $before, $after, $prepend = null)
-    {
-        $str = $prepend;
-        foreach (array_values($array) as $item) {
-            $str .= $before . $item . $after;
-        }
-        return $str;
-    }
-
     protected function onGetLabel($label)
     {
         $label->for = $this->name;
         return $label;
     }
 
+    /**
+     * @param Element $label
+     * @return Element
+     */
+    protected function onSetLabel($label)
+    {
+        $label->tag = 'label';
+        return $label;
+    }
 
     /**
+     * @param $value
      * @return string
      */
-    public function makeFieldName()
+    public function onGetName($value)
     {
-        $names = (array) $this->getProperty('baseNames', []);
-        $names[] = $this->getProperty('name')  ?: $this->getProperty('slug');
+        return $this->makeFieldName($value, $this->getProperty('baseNames'), $this->muliple);
+    }
+
+    /**
+     * @return bool|mixed
+     */
+    public function dotName()
+    {
+        if ($name = $this->name)
+            return str_replace(['[', ']'], ['.', ''], $name);
+        return false;
+    }
+
+    /**
+     * @param $name
+     * @param $baseNames
+     * @param $multiple
+     * @return string
+     */
+    protected function makeFieldName($name, $baseNames, $multiple)
+    {
+        $baseNames = (array) $baseNames;
+        $baseNames[] = $name;
         $name = null;
-        foreach ($names as $_name) {
+        foreach ($baseNames as $_name) {
             if (!$name)
             {
                 if ($_name === false)
@@ -113,17 +108,7 @@ class Field extends ContainedElement {
                 $name .= '['.$_name.']';
         }
 
-        if ($this->multiple) return $name.'[]';
+        if ($multiple) return $name.'[]';
         return $name;
     }
-
-    /**
-     * @param $string
-     * @return $this
-     */
-    public function removeProperty($name)
-    {
-        unset($this->properties[$name]);
-        return $this;
-    }
-} 
+}

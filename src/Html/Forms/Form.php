@@ -3,79 +3,95 @@
 use Illuminate\Support\Collection;
 
 class Form extends Element {
+    protected static $macros = [];
     /**
-     * @var RendererInterface
+     * @var FormRendererInterface
      */
-    protected static $fieldRenderer;
+    protected $renderer;
     /**
      * @var string
      */
-    protected $fieldClass = 'Iyoworks\Html\Forms\Field';
+    public $elementType = 'form';
     /**
      * @var array|Field[]
      */
-    protected $fields = [];
+    protected $elements = [];
     /**
      * @var array|callable
      */
-    protected $callbacks = ['form' => [], 'fields' => []];
+    protected $callbacks = ['form' => [], 'fields' => [], 'elements' => []];
+
+    protected $defaultElementProperties = [
+        'hidden' => [ 'rowable' => false,
+            'container' => false,
+            'label' => false],
+        'textarea' => ['tag' => 'textarea'],
+        'label' => ['tag' => 'label'],
+        'fieldset' => ['tag' => 'fieldset'],
+        'legend' => ['tag' => 'legend'],
+        'select' => ['tag' => 'select'],
+        'optgroup' => ['tag' => 'optgroup'],
+        'option' => ['tag' => 'option'],
+        'button' => ['tag' => 'button'],
+        'datalist' => ['tag' => 'datalist'],
+        'keygen' => ['tag' => 'keygen'],
+        'output' => ['tag' => 'output'],
+    ];
 
     protected $properties = [
-        'title' => null,
         'tag' => 'form',
         'csrfToken' => true,
         'perRow' => 1,
         'files' => true,
+        'maxColumns' => 12,
+        'rowClass' => 'col-md-',
         'baseFieldName' => null,
-        'rowAttributes' => ['class' => 'field-row row'],
-        'submit' => null
+        'rowAttributes' => ['class' => 'field-row row']
     ];
-    protected $elementProperties = ['submit'];
-
-    function __construct(RendererInterface $renderer, array $properties = array(), array $attributes = array())
-    {
-        parent::__construct($renderer, $properties, $attributes);
-        $this->setProperty('submit', new ContainedElement($renderer, ['tag' => 'button', 'value' => 'Save'],
-            ['type' => 'submit', 'class' => 'btn btn-success btn-sm', 'field' => true]));
-    }
 
     /**
-     * @param \Iyoworks\Html\Forms\RendererInterface $fieldRenderer
+     * @param array $properties
+     * @param array $attributes
+     * @param FormRendererInterface $renderer
      */
-    public static function setFieldRenderer(RendererInterface $fieldRenderer)
+    public function __construct(array $properties = array(), array $attributes = array(),
+                                FormRendererInterface $renderer = null)
     {
-        self::$fieldRenderer = $fieldRenderer;
+        parent::__construct($properties, $attributes, $renderer);
     }
 
     /**
-     * @throws \UnexpectedValueException
-     * @return \Iyoworks\Html\Forms\RendererInterface
+     * @param $name
+     * @param $callable
      */
-    public static function getFieldRenderer()
+    public static function addMacro($name, $callable)
     {
-        if (!self::$fieldRenderer)
-            throw new \UnexpectedValueException('An an instance of \Iyoworks\Html\RendererInterface was expected');
-        return self::$fieldRenderer;
+        static::$macros[$name] = $callable;
     }
 
     /**
+     * @param $name
+     * @return bool
+     */
+    public static function isMacro($name)
+    {
+        return isset(static::$macros[$name]);
+    }
+
+    /**
+     * @param $type
      * @param $slug
      * @param $value
      * @param array $properties
      * @return Field
      */
-    public function addHidden($slug, $value, array $properties = [])
+    public function input($type, $slug, $value = null, array $properties = [])
     {
-        $properties = array_merge(['value' => $value,
-                'type' => 'hidden',
-                'tag' => 'input',
-                'rowable' => false,
-                'field' => true,
-                'container' => false,
-                'label' => false,
-                'slug' => $slug],
-            $properties);
-        return $this->addField($slug, $properties);
+        $defaults = array_get($this->defaultElementProperties, $type, []);
+        $properties = array_merge($defaults, $properties);
+        $properties['slug'] = $slug;
+        $properties['value'] = $value;
+        return $this->add($slug, $properties);
     }
 
     /**
@@ -99,99 +115,7 @@ class Form extends Element {
     {
         $properties['slug'] = $slug;
         $field = $this->makeField($properties, $attributes);
-        $field->setProperty('field', true);
         return $this->addElement($field, $slug);
-    }
-
-    /**
-     * @param Element $element
-     * @param null $index
-     * @return Element
-     */
-    public function addElement(Element $element, $index = null)
-    {
-        if ($index)
-            $this->fields[$index] = $element;
-        else
-            $this->fields[] = $element;
-        if(!$element->hasProperty('order'))
-            $element->setProperty('order', count($this->fields));
-        return $element;
-    }
-
-    /**
-     * @param array $properties
-     * @return Element
-     */
-    protected function makeElement(array $properties)
-    {
-        $element = new Element($this->renderer, $properties);
-        return $element;
-    }
-
-    /**
-     * @param $slug
-     * @param mixed $value
-     * @return bool|Field
-     */
-    public function getField($slug, $value = null)
-    {
-        if(isset($this->fields[$slug]))
-        {
-            $field = $this->fields[$slug];
-            if($value) $field->value = $value;
-            return $field;
-        }
-        return false;
-    }
-
-    /**
-     * @param array $attributes
-     * @return Element
-     */
-    public function rowElement(array $attributes = null)
-    {
-        if(!$attributes) $attributes = $this->rowAttributes;
-        return new Element($this->renderer, [], $attributes);
-    }
-
-    public function runCallbacks($group)
-    {
-       if($group == 'fields')
-       {
-           foreach ($this->callbacks[$group] as $callback)
-           {
-               foreach ($this->fields as $field)
-               {
-                   call_user_func($callback, $field);
-               }
-           }
-       }
-        else
-        {
-            foreach ($this->callbacks[$group] as $callback)
-            {
-                call_user_func($callback, $this);
-            }
-        }
-    }
-
-    /**
-     * @return array|Field[]
-     */
-    public function getFieldArray()
-    {
-        return $this->fields;
-    }
-
-    /**
-     * @return \Illuminate\Support\Collection|Field[]
-     */
-    public function getFields()
-    {
-        $collection = new Collection($this->fields);
-        $collection->sortBy('order');
-        return $collection;
     }
 
     /**
@@ -201,10 +125,187 @@ class Form extends Element {
      */
     protected function makeField($properties, $attributes)
     {
-        if ($atts = array_pull($properties, 'attr'))
-            $attributes = array_merge($attributes, $atts);
-        $field = new $this->fieldClass(static::$fieldRenderer, $properties, $attributes);
+        $field = Field::make($properties, $attributes, $this->renderer);
         return $field;
+    }
+
+    /**
+     * @param Element $element
+     * @param null $index
+     * @return Element
+     */
+    public function addElement(Element $element, $index = null)
+    {
+        if ($atts = array_get($element->getProperties(), 'attr'))
+        {
+            $attributes = array_merge($element->toArray(), $atts);
+            $element->fill($attributes);
+            $element->removeProperty('attr');
+        }
+
+        if(!$element->hasProperty('order'))
+            $element->setProperty('order', count($this->elements));
+
+        if ($index)
+            $this->elements[$index] = $element;
+        else
+            $this->elements[] = $element;
+        return $element;
+    }
+
+    /**
+     * @param array $properties
+     * @return Element
+     */
+    protected function makeElement(array $properties = [])
+    {
+        $element = Element::make($properties, [], $this->renderer);
+        return $element;
+    }
+
+    /**
+     * return the field if it exists
+     * @param $slug
+     * @return bool|Field
+     */
+    public function getField($slug)
+    {
+        if(isset($this->elements[$slug]))
+            return $this->elements[$slug];
+        return false;
+    }
+
+    /**
+     * If the field exists, set its value
+     * @param $slug
+     * @param $value
+     * @return $this
+     */
+    public function setValue($slug, $value)
+    {
+        if(isset($this->elements[$slug]))
+        {
+            $field = $this->elements[$slug];
+            $field->value = $value;
+        }
+        return $this;
+    }
+
+    public function rowClass($rowSize)
+    {
+        return $this->rowClass.round($this->maxColumns / min($this->perRow, $rowSize));
+    }
+
+    /**
+     * @param array $attributes
+     * @return Element
+     */
+    public function rowElement(array $attributes = null)
+    {
+        if(!$attributes) $attributes = $this->rowAttributes;
+        return $this->makeElement()->fill($attributes);
+    }
+
+    /**
+     * Run callbacks for fields or elements
+     * @param $group
+     */
+    public function runCallbacks($group)
+    {
+        if (isset($this->callbacks[$group]))
+            foreach ($this->callbacks[$group] as $k => $callback)
+            {
+                foreach ($this->elements as $field)
+                {
+                    if (Str::plural($field->elementType) == $group)
+                        call_user_func($callback, $field);
+                }
+            }
+    }
+
+    /**
+     * @return Collection|Field[]
+     */
+    public function getRowableElements()
+    {
+        return $this->getElements()->filter(function($field) {
+            return (bool) $field->rowable;
+        })->chunk($this->perRow, true);
+    }
+
+    /**
+     * @return Collection|Field[]
+     */
+    public function getNonRowableElements()
+    {
+        return $this->getElements()->filter(function($field) {
+            return !$field->rowable;
+        });
+    }
+
+    /**
+     * @return string
+     */
+    public function onGetValue()
+    {
+        $this->runCallbacks('fields');
+        $this->runCallbacks('elements');
+        $formStr = [];
+        foreach ($this->getRowableElements() as $row)
+        {
+            $rowElement = $this->rowElement();
+            foreach ($row as $field)
+            {
+                if($field->container)
+                {
+                    $_size = $this->rowClass(count($row));
+                    $field->container->addClass($_size);
+                }
+                $rowElement->value .= $field->html();
+            }
+            $formStr[] = $rowElement->html();
+        }
+        foreach ($this->getNonRowableElements() as $field)
+        {
+            $formStr[] = $field->html();
+        }
+
+        return join(PHP_EOL, $formStr);
+    }
+
+    /**
+     * @return string
+     */
+    public function open()
+    {
+        $this->runCallbacks('form');
+        return $this->renderer->renderOpen($this);
+    }
+
+    /**
+     * @return string
+     */
+    public function close()
+    {
+        return $this->renderer->renderClose($this);
+    }
+
+    /**
+     * @return \Illuminate\Support\Collection|Field[]
+     */
+    public function getElements()
+    {
+        $collection = new Collection($this->elements);
+        $collection->sortBy('order');
+        return $collection;
+    }
+
+    /**
+     * @return array|Element[]
+     */
+    public function getElementArray()
+    {
+        return $this->elements;
     }
 
     /**
@@ -215,94 +316,66 @@ class Form extends Element {
     public function fetchProperty($property, $default = null)
     {
         $results = [];
-        foreach ($this->fields as $key => $field) {
+        foreach ($this->elements as $key => $field) {
             $results[$key] = $field->getProperty($property,$default);
         }
         return $results;
     }
 
+    /**
+     * @param $callable
+     * @return $this
+     */
     public function onRenderField($callable)
     {
         $this->callbacks['fields'][] = $callable;
-    }
-
-    public function onRender($callable)
-    {
-        $this->callbacks['form'][] = $callable;
+        return $this;
     }
 
     /**
-     * @param string $fieldClass
+     * @param $callable
+     * @return $this
      */
-    public function setFieldClass($fieldClass)
+    public function onRenderElement($callable)
     {
-        $this->fieldClass = $fieldClass;
+        $this->callbacks['elements'][] = $callable;
+        return $this;
     }
 
     /**
-     * @return string
+     * @param $name
+     * @param $parameters
+     * @return Field|mixed
      */
-    public function getFieldClass()
+    public function useMacro($name, $parameters)
     {
-        return $this->fieldClass;
-    }
-
-    /**
-     * @return Collection
-     */
-    public function getRowableFields()
-    {
-        return $this->getFields()->filter(function($field){
-            return $field->rowable;
-        })->chunk($this->perRow, true);
-    }
-
-    /**
-     * @return Collection
-     */
-    public function getNonRowableFields()
-    {
-        return $this->getFields()->filter(function($field){
-            return !$field->rowable;
-        });
+        $callable = static::$macros[$name];
+        $parameters[] = $this;
+        return call_user_func_array($callable, $parameters);
     }
 
     /**
      * @return string
      */
-    public function renderFields()
-    {
-        $this->runCallbacks('fields');
-        return $this->renderer->renderFormFields($this);
-    }
-
-    /**
-     * @return string
-     */
-    public function open()
-    {
-        $this->runCallbacks('form');
-        return $this->renderer->renderFormOpen($this);
-    }
-
-    /**
-     * @return string
-     */
-    public function close()
-    {
-        return $this->renderer->renderFormClose($this);
-    }
-
-    /**
-     * @return string
-     */
-    public function render()
-    {
-        return $this->open().$this->renderFields().$this->close();
-    }
-
     public function __toString()
     {
-        return $this->render();
+        return $this->html();
+    }
+
+    /**
+     * Handle dynamic calls to the container to set attributes
+     * or create fields dynamically
+     * @param  string  $method
+     * @param  array   $parameters
+     * @return Field|mixed
+     */
+    public function __call($method, $parameters)
+    {
+        if ($this->isProperty($method))
+            return parent::__call($method, $parameters);
+        if(static::isMacro($method))
+            return $this->useMacro($method, $parameters);
+        array_unshift($parameters, $method);
+        return call_user_func_array([$this, 'input'], $parameters);
     }
 }

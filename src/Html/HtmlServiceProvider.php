@@ -1,7 +1,7 @@
 <?php namespace Iyoworks\Html;
 
 use Iyoworks\Html\Forms\Form;
-use Iyoworks\Html\Forms\FormRenderer;
+use Iyoworks\Html\Forms\FormElementRenderer;
 
 class HtmlServiceProvider extends \Illuminate\Html\HtmlServiceProvider {
     public function boot()
@@ -45,7 +45,7 @@ class HtmlServiceProvider extends \Illuminate\Html\HtmlServiceProvider {
 
         $this->app->bindShared('form.renderer', function($app)
         {
-            return new FormRenderer($app['view'], '_form-field');
+            return new FormElementRenderer($app['view'], '_form-field');
         });
 
     }
