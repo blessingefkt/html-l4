@@ -134,7 +134,10 @@ class Element implements ArrayableInterface {
      */
     protected function addAppendage($string, $element)
     {
-        $this->appendages[$string][] = $element;
+        if ($index = $element->slug)
+            $this->appendages[$string][$index] = $element;
+        else
+            $this->appendages[$string][] = $element;
     }
 
     /**

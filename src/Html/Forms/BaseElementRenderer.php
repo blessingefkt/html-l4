@@ -7,7 +7,37 @@ use Iyoworks\Support\Str;
 
 abstract class BaseElementRenderer implements ElementRendererInterface  {
 
-    public function getSelectFieldOptions($list, $selected = null)
+    public function getInputFieldOptions($field, $list, $selected = null)
+    {
+        $selected = (array) $selected;
+        $list = (array) $list;
+        $html = array();
+        $attributes = ['name' => $field->name, 'type' => $field->type];
+        foreach ($list as $value => $display)
+        {
+            $_option = $this->inputOption($value, $selected, $attributes);
+            $format = $field->getProperty('format');
+            $html[] = str_replace(['[label]', '[name]', '[checkable]'], [$display, $field->name, $_option], $format);
+        }
+        return implode('', $html);
+    }
+
+    /**
+     * Create a select element option.
+     *
+     * @param  string $value
+     * @param  string $selected
+     * @param array $attributes
+     * @return string
+     */
+    protected function inputOption($value, $selected, array $attributes = [])
+    {
+        $selected = $this->getSelectedValue($value, $selected, 'checked');
+        $options = array_merge($attributes, array('value' => $this->e($value), 'checked' => $selected));
+        $atts = $this->makeAttributeString($options);
+        return "<input{$atts}>";
+    }
+    public function getSelectFieldOptions($field, $list, $selected = null)
     {
         $selected = (array) $selected;
         $list = (array) $list;
@@ -18,6 +48,7 @@ abstract class BaseElementRenderer implements ElementRendererInterface  {
         }
         return implode('', $html);
     }
+
     /**
      * Get the select option for the given value.
      *
@@ -30,10 +61,10 @@ abstract class BaseElementRenderer implements ElementRendererInterface  {
     {
         if (is_array($display))
         {
-            return $this->optionGroup($display, $value, $selected);
+            return $this->selectOptionGroup($display, $value, $selected);
         }
 
-        return $this->option($display, $value, $selected);
+        return $this->selectOption($display, $value, $selected);
     }
 
     /**
@@ -44,13 +75,13 @@ abstract class BaseElementRenderer implements ElementRendererInterface  {
      * @param  string  $selected
      * @return string
      */
-    protected function optionGroup($list, $label, $selected)
+    protected function selectOptionGroup($list, $label, $selected)
     {
         $html = array();
 
         foreach ($list as $value => $display)
         {
-            $html[] = $this->option($display, $value, $selected);
+            $html[] = $this->selectOption($display, $value, $selected);
         }
 
         return '<optgroup label="'.$this->e($label).'">'.implode('', $html).'</optgroup>';
@@ -59,35 +90,36 @@ abstract class BaseElementRenderer implements ElementRendererInterface  {
     /**
      * Create a select element option.
      *
-     * @param  string  $display
-     * @param  string  $value
-     * @param  string  $selected
+     * @param  string $display
+     * @param  string $value
+     * @param  string $selected
      * @return string
      */
-    protected function option($display, $value, $selected)
+    protected function selectOption($display, $value, $selected)
     {
         $selected = $this->getSelectedValue($value, $selected);
-
         $options = array('value' => $this->e($value), 'selected' => $selected);
-
-        return '<option'.$this->makeAttributeString($options).'>'.$this->e($display).'</option>';
+        $tagValue = $this->e($display);
+        $atts = $this->makeAttributeString($options);
+        return "<option{$atts}>{$tagValue}</option>";
     }
 
     /**
      * Determine if the value is selected.
      *
-     * @param  string  $value
-     * @param  string  $selected
+     * @param  string $value
+     * @param  string $selected
+     * @param string $attributeValue
      * @return string
      */
-    protected function getSelectedValue($value, $selected)
+    protected function getSelectedValue($value, $selected, $attributeValue = 'selected')
     {
         if (is_array($selected))
         {
-            return in_array($value, $selected) ? 'selected' : null;
+            return in_array($value, $selected) ? $attributeValue : null;
         }
 
-        return ((string) $value == (string) $selected) ? 'selected' : null;
+        return ((string) $value == (string) $selected) ? $attributeValue : null;
     }
 
     /**

@@ -9,12 +9,14 @@ class Field extends ContainedElement {
         'name' => null,
         'slug' => null,
         'rowable' => true,
+        'row' => null,
         'rules' => '',
         'options' => [],
         'variables' => [],
         'description' => null,
         'baseNames' => [],
         'label' => null,
+        'checkable' => false,
         'ignoreLabel' => false,
         'ignoreDescription' => false,
         'container' => null
@@ -59,9 +61,8 @@ class Field extends ContainedElement {
         if (is_null($value))
             $value = $this->getProperty('slug');
         $baseNames = $this->getProperty('baseNames');
-        if ($baseNames !== false)
-            $value = $this->makeFieldName($value, $this->getProperty('baseNames'), $this->muliple);
-        return $value;
+        if ($baseNames === false) $baseNames = [];
+        return $value = $this->makeFieldName($value, $baseNames, $this->multiple);
     }
 
     /**

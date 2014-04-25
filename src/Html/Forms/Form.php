@@ -1,6 +1,7 @@
 <?php namespace Iyoworks\Html\Forms;
 
 use Illuminate\Support\Collection;
+use Iyoworks\Support\Traits\ExtendableTrait;
 
 /**
  * Class Form
@@ -19,7 +20,7 @@ use Illuminate\Support\Collection;
  * @method Field output() 	output(string $slug, string $value = null, array $properties = null)
  */
 class Form extends Element {
-    protected static $macros = [];
+    use ExtendableTrait;
     /**
      * @var FormRendererInterface
      */
@@ -40,10 +41,13 @@ class Form extends Element {
     protected $defaultElementTypes = [
         'text' => ['type' => 'text'],
         'textarea' => ['tag' => 'textarea'],
+        'checkbox' => ['type' => 'checkbox', 'checkable' => 'input', 'format' => '<label for="[name]">[checkable][label]</label>'],
+        'radio' => ['type' => 'radio', 'checkable' => 'input'],
+        'password' => ['type' => 'password'],
         'label' => ['tag' => 'label'],
         'fieldset' => ['tag' => 'fieldset'],
         'legend' => ['tag' => 'legend'],
-        'select' => ['tag' => 'select'],
+        'select' => ['tag' => 'select', 'checkable' => 'select'],
         'optgroup' => ['tag' => 'optgroup'],
         'option' => ['tag' => 'option'],
         'button' => ['tag' => 'button', 'class' => 'btn'],
@@ -55,7 +59,6 @@ class Form extends Element {
     protected $properties = [
         'tag' => 'form',
         'csrfToken' => true,
-        'perRow' => 1,
         'files' => true,
         'maxColumns' => 12,
         'rowClass' => 'col-md-',
@@ -78,10 +81,11 @@ class Form extends Element {
     /**
      * @param $name
      * @param $callable
+     * @return bool
      */
     public static function addMacro($name, $callable)
     {
-        static::$macros[$name] = $callable;
+        static::extend($name, $callable);
     }
 
     /**
@@ -90,7 +94,7 @@ class Form extends Element {
      */
     public static function isMacro($name)
     {
-        return isset(static::$macros[$name]);
+        return isset(static::$extensions[$name]);
     }
 
     /**
@@ -102,9 +106,7 @@ class Form extends Element {
      */
     public function input($type, $slug, $value = null, array $properties = null)
     {
-        $properties['value'] = $value;
-        $properties['type'] = $type;
-        return $this->add($slug, $properties);
+        return $this->addField($type, $slug, $value, $properties);
     }
 
     /**
@@ -114,7 +116,7 @@ class Form extends Element {
      */
     public function submit($value = null, array $properties = null)
     {
-        $properties = array_merge(['rowable' => false, 'label' => false,
+        $properties = array_merge(['rowable' => false, 'label' => false, 'order' => 1000,
             'attr' => ['class' => 'btn btn-primary']], $properties ?: []);
         $button = $this->button('submit', $value, $properties);
         $button->setAttr('type', 'submit');
@@ -136,31 +138,32 @@ class Form extends Element {
     }
 
     /**
+     * @param $type
      * @param $slug
+     * @param null $value
      * @param array $properties
-     * @param array $attributes
+     * @throws \ErrorException
      * @return Field
      */
-    public function add($slug, $properties = null,  $attributes = null)
+    public function addField($type, $slug, $value = null, array $properties = null)
     {
-        return $this->addField($slug, $properties, $attributes);
-    }
+        if (empty($type))
+            throw new \ErrorException("{$slug} field does not have a type");
 
-    /**
-     * @param $slug
-     * @param array $properties
-     * @param array $attributes
-     * @return Field
-     */
-    public function addField($slug, $properties = null,  $attributes = null)
-    {
+        if (static::isMacro($type))
+            return static::macro($type, $slug, $value, $properties);
+
+        if (isset($this->defaultElementTypes[$type]))
+            $defaults = $this->defaultElementTypes[$type];
+        else
+            $defaults = [];
+
+        $defaults['type'] = $type;
+        $attributes = array_pull($properties, 'attr', []);
+        $properties = array_merge($defaults, $properties ?: []);
         $properties['slug'] = $slug;
-        if ($type = array_get($properties, 'type'))
-        {
-            $defaults = array_get($this->defaultElementTypes, $type, []);
-            $defaults['type'] = $type;
-            $properties = array_merge($defaults, $properties ?: []);
-        }
+        $properties['value'] = $value;
+
         $field = $this->makeField($properties, $attributes);
         return $this->addElement($field, $slug);
     }
@@ -241,7 +244,7 @@ class Form extends Element {
 
     public function rowClass($rowSize)
     {
-        return $this->rowClass.round($this->maxColumns / min($this->perRow, $rowSize));
+        return $this->rowClass.round($this->maxColumns / $rowSize);
     }
 
     /**
@@ -280,11 +283,26 @@ class Form extends Element {
     /**
      * @return Collection|Field[]
      */
-    public function getRowableElements()
+    public function getElementsByRow()
     {
-        return $this->getElements()->filter(function($field) {
-            return (bool) $field->rowable;
-        })->chunk($this->perRow, true);
+        $countBase = count($this->elements).microtime(true);
+        $grouped = $this->getElements()
+            ->filter(function($field) {
+                return $field->getProperty('rowable');
+            })
+            ->groupBy(function($field) use ($countBase) {
+                static $i = 0;
+                return $field->getProperty('row') ?: ($field->row = $countBase + $i++);
+            });
+        if($grouped->has(0))
+        {
+            $unnamed = $grouped->get(0);
+            unset($grouped[0]);
+            foreach ($unnamed as $field) {
+                $grouped->push([$field]);
+            }
+        }
+        return $grouped;
     }
 
     /**
@@ -305,7 +323,7 @@ class Form extends Element {
         $this->runCallbacks('field');
         $this->runCallbacks('element');
         $formStr = [];
-        foreach ($this->getRowableElements() as $row)
+        foreach ($this->getElementsByRow() as $row)
         {
             $rowElement = $this->rowElement();
             foreach ($row as $field)
@@ -323,7 +341,6 @@ class Form extends Element {
         {
             $formStr[] = $field->html();
         }
-
         return join(PHP_EOL, $formStr);
     }
 
@@ -407,15 +424,16 @@ class Form extends Element {
     }
 
     /**
-     * @param $name
-     * @param $parameters
-     * @return Field|mixed
+     * @param $type
+     * @param $slug
+     * @param mixed $value
+     * @param array $properties
+     * @return Element
      */
-    public function useMacro($name, $parameters)
+    public function macro($type, $slug, $value = null, array $properties = null)
     {
-        $callable = static::$macros[$name];
-        $parameters[] = $this;
-        call_user_func_array($callable, $parameters);
+        $callable = static::$extensions[$type];
+        return call_user_func($callable, $slug, $value, $properties ?: [], $this);
     }
 
     /**
@@ -435,12 +453,10 @@ class Form extends Element {
      */
     public function __call($method, $parameters)
     {
-        if(static::isMacro($method))
-            return $this->useMacro($method, $parameters);
-        if(isset($this->defaultElementTypes[$method]))
+        if($this->isMacro($method) || isset($this->defaultElementTypes[$method]))
         {
             array_unshift($parameters, $method);
-            return call_user_func_array([$this, 'input'], $parameters);
+            return call_user_func_array([$this, 'addField'], $parameters);
         }
         return parent::__call($method, $parameters);
     }

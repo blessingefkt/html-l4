@@ -113,30 +113,29 @@ class LaravelFormRenderer extends BaseElementRenderer implements FormRendererInt
         $field->setAttr('name', $field->name);
         if (!$field->getAttr('type'))
             $field->setAttr('type', $field->type);
-
-        if (!$field->ignoreDescription && $desc = $field->description)
+        if (!$field->ignoreLabel && $field->label)
         {
-            $desc = Element::make(['slug' => 'description', 'value' => $desc], ['class' => 'field-description']);
-            $field->append($desc);
-        }
-
-        if (!$field->ignoreLabel && $label = $field->label)
-        {
-            $label = Element::make(['slug' => 'label', 'value' => $label, 'tag' => 'label'],
+            $label = Element::make(['slug' => 'label', 'value' => $field->label, 'tag' => 'label'],
                 ['class' => 'field-label', 'for' => $field->name]);
             $field->prepend($label);
         }
 
+        if (!$field->ignoreDescription && $field->description)
+        {
+            $desc = Element::make(['slug' => 'description', 'value' => $field->description], ['class' => 'field-description']);
+            $field->append($desc);
+        }
+
         $default = $field->value;
-        \Debug::log($field->getProperties());
         $field->value = $this->getFieldValue($field->safeName(), $default);
 
         $this->setFieldErrorMessage($field);
 
-        if ($field->type == 'select')
+        if ($checkable = $field->checkable)
         {
-            $field->value  = $this->getSelectFieldOptions($field->options, $field->value);
-            $html = $this->makeElementHTML($field);
+            $_func = 'get'.Str::studly($checkable).'FieldOptions';
+            $_html = $this->{$_func}($field, $field->options, $field->value);
+            $html = $this->makeElementHTML($field, $_html);
         }
         elseif (in_array($field->type, $this->formFields))
         {
@@ -210,12 +209,11 @@ class LaravelFormRenderer extends BaseElementRenderer implements FormRendererInt
     {
         if (is_null($name) || !isset($this->session))
             return value($default);
-        $result = $this->session->getOldInput($name);
-        if (is_null($result))
-        {
-            $result = $this->session->get($name, $default);
-        }
-        return value($result ?: $default);
+        if ($this->session->hasOldInput($name))
+            $result = $this->session->getOldInput($name);
+        else
+            $result = $default;
+        return value($result);
     }
 
     public function fire($action, $type, $element)
