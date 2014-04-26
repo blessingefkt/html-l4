@@ -10,6 +10,7 @@ class Field extends ContainedElement {
         'slug' => null,
         'rowable' => true,
         'row' => null,
+        'format' => null,
         'rules' => '',
         'options' => [],
         'variables' => [],
@@ -17,6 +18,7 @@ class Field extends ContainedElement {
         'baseNames' => [],
         'label' => null,
         'checkable' => false,
+        'checkable-format' => '<label for="[name]">[checkable][label]</label>',
         'ignoreLabel' => false,
         'ignoreDescription' => false,
         'container' => null
@@ -41,10 +43,14 @@ class Field extends ContainedElement {
         $names = $this->getProperty('baseNames');
         if ($names !== false)
         {
-            if ($onTop)
-                array_unshift($names, $value);
-            else
-                array_push($names, $value);
+            $values = (array) $value;
+            foreach ($values as $value)
+            {
+                if ($onTop)
+                    array_unshift($names, $value);
+                else
+                    array_push($names, $value);
+            }
             $this->setProperty('baseNames', $names);
         }
         return $this;

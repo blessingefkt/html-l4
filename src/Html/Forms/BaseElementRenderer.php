@@ -16,8 +16,9 @@ abstract class BaseElementRenderer implements ElementRendererInterface  {
         foreach ($list as $value => $display)
         {
             $_option = $this->inputOption($value, $selected, $attributes);
-            $format = $field->getProperty('format');
-            $html[] = str_replace(['[label]', '[name]', '[checkable]'], [$display, $field->name, $_option], $format);
+            $format = $field->getProperty('checkable-format');
+            $str = str_replace(['[label]', '[name]', '[checkable]'], [$display, $field->name, $_option], $format);
+            $html[] = $str;
         }
         return implode('', $html);
     }
@@ -37,6 +38,13 @@ abstract class BaseElementRenderer implements ElementRendererInterface  {
         $atts = $this->makeAttributeString($options);
         return "<input{$atts}>";
     }
+
+    /**
+     * @param $field
+     * @param $list
+     * @param null $selected
+     * @return string
+     */
     public function getSelectFieldOptions($field, $list, $selected = null)
     {
         $selected = (array) $selected;

@@ -28,7 +28,7 @@ class Element implements ArrayableInterface {
     /**
      * @var array
      */
-    protected $properties = ['tag'];
+    protected $properties = [];
     /**
      * @var array|Element[][]
      */
@@ -453,6 +453,11 @@ class Element implements ArrayableInterface {
     public function getProperties()
     {
         return $this->properties;
+    }
+
+    public function formatTag()
+    {
+        return "[{$this->elementType}]";
     }
 
 }

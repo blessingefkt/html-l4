@@ -41,7 +41,7 @@ class Form extends Element {
     protected $defaultElementTypes = [
         'text' => ['type' => 'text'],
         'textarea' => ['tag' => 'textarea'],
-        'checkbox' => ['type' => 'checkbox', 'checkable' => 'input', 'format' => '<label for="[name]">[checkable][label]</label>'],
+        'checkbox' => ['type' => 'checkbox', 'checkable' => 'input'],
         'radio' => ['type' => 'radio', 'checkable' => 'input'],
         'password' => ['type' => 'password'],
         'label' => ['tag' => 'label'],
@@ -95,6 +95,14 @@ class Form extends Element {
     public static function isMacro($name)
     {
         return isset(static::$extensions[$name]);
+    }
+
+    public function fieldsBaseName($baseName)
+    {
+        $this->onRenderField(function($field) use ($baseName)
+        {
+            $field->addName($baseName, true);
+        });
     }
 
     /**
@@ -219,7 +227,7 @@ class Form extends Element {
      * @param $slug
      * @return bool|Field
      */
-    public function getField($slug)
+    public function find($slug)
     {
         if(isset($this->elements[$slug]))
             return $this->elements[$slug];

@@ -46,6 +46,10 @@ class LaravelFormRenderer extends BaseElementRenderer implements FormRendererInt
             default :
                 $output = $this->makeElementHTML($element);
         }
+
+        if ($format =  $element->getProperty('format'))
+            $output = str_replace($element->formatTag(), $output, $format);
+
         $this->fire('rendered', $elementType, $element);
 
         foreach ($element->getAppendages('prepend') as $_elem)
