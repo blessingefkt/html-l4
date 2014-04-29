@@ -54,6 +54,7 @@ class HtmlServiceProvider extends \Illuminate\Html\HtmlServiceProvider {
     {
         $provides = parent::provides();
         $provides[] = 'breadcrumbs';
+        $provides[] = 'form.renderer';
         return $provides;
     }
 
