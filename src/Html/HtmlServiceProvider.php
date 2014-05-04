@@ -1,16 +1,17 @@
 <?php namespace Iyoworks\Html;
 
-use Iyoworks\Html\Forms\Form;
-use Iyoworks\Html\Forms\LaravelFormRenderer;
-
 class HtmlServiceProvider extends \Illuminate\Html\HtmlServiceProvider {
 
+    protected function registerFormBuilder()
+    {
+        $this->app->bindShared('form', function ($app) {
+            $form = new FormBuilder($app['html'], $app['url'], $app['session.store']->getToken());
 
-    /**
-     * Register the HTML builder instance.
-     *
-     * @return void
-     */
+            return $form->setSessionStore($app['session.store']);
+        });
+
+    }
+
     protected function registerHtmlBuilder()
     {
         $this->app->bindShared('html', function($app)
@@ -26,10 +27,6 @@ class HtmlServiceProvider extends \Illuminate\Html\HtmlServiceProvider {
 
     public function provides()
     {
-        $provides = parent::provides();
-        $provides[] = 'breadcrumbs';
-        return $provides;
+        return ['html', 'form', 'breadcrumbs'];
     }
-
-
 } 
