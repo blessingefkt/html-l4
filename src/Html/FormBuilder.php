@@ -3,7 +3,6 @@
 
 use Illuminate\Routing\UrlGenerator;
 use Iyoworks\Html\Forms\Field;
-use Iyoworks\Html\Forms\ElementRendererInterface;
 
 class FormBuilder extends \Illuminate\Html\FormBuilder {
 
@@ -11,16 +10,6 @@ class FormBuilder extends \Illuminate\Html\FormBuilder {
      * @var \Iyoworks\Html\HtmlBuilder
      */
     protected $html;
-    /**
-     * @var ElementRendererInterface
-     */
-    private $renderer;
-
-    public function __construct(ElementRendererInterface $renderer, HtmlBuilder $html, UrlGenerator $url, $csrfToken)
-    {
-        parent::__construct($html, $url, $csrfToken);
-        $this->renderer = $renderer;
-    }
 
     /**
      * @param  string $name
@@ -76,21 +65,6 @@ class FormBuilder extends \Illuminate\Html\FormBuilder {
             $value ?: 'No file selected...');
     }
 
-    /**
-     * @param $name
-     * @param null $value
-     * @param array $properties
-     * @internal param null $label
-     * @return \Iyoworks\Html\Forms\Field
-     */
-    public function field($name, $value = null, array $properties = [])
-    {
-        $properties['slug'] = $name;
-        $properties['name'] = $name;
-        $properties['value'] = $value;
-        return Field::make($properties, []);
-    }
-
     public function urlSelect($label, $query, array $options, $baseUrl = null)
     {
         $html = '<label class="control-label">'.$label.'</label>'
@@ -106,8 +80,14 @@ class FormBuilder extends \Illuminate\Html\FormBuilder {
         return $html;
     }
 
+    /**
+     * @param $query
+     * @return null|string
+     */
     protected function getCurrentParam($query)
     {
-        return \Input::get($query);
+        if (isset($this->session))
+            return $this->session->get($query);
+        return null;
     }
 }
