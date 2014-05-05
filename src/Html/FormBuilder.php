@@ -65,29 +65,18 @@ class FormBuilder extends \Illuminate\Html\FormBuilder {
             $value ?: 'No file selected...');
     }
 
-    public function urlSelect($label, $query, array $options, $baseUrl = null)
+    public function urlSelect($label, array $options, $queryParam, $selectedValue = null, $baseUrl = null)
     {
         $html = '<label class="control-label">'.$label.'</label>'
             .'<select class="form-control url-select"'
-            .'data-base-url="'.$baseUrl.'" data-query-param="'.$query.'">';
+            . 'data-base-url="' . $baseUrl . '" data-query-param="' . $queryParam . '">';
         foreach ($options as $queryValue => $option) {
-            $selected = ($this->getCurrentParam($query) == $queryValue) ? 'selected="selected"': '';
+            $selected = ($selectedValue == $queryValue) ? 'selected="selected"' : '';
             $html .= '<option '.$selected.' value="'.$queryValue.'">';
             $html .= $option;
             $html .= '</option>';
         }
         $html .= '</select>';
         return $html;
-    }
-
-    /**
-     * @param $query
-     * @return null|string
-     */
-    protected function getCurrentParam($query)
-    {
-        if (isset($this->session))
-            return $this->session->get($query);
-        return null;
     }
 }
