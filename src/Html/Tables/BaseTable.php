@@ -43,7 +43,7 @@ abstract class BaseTable extends Element implements \Countable {
      */
     public function header($slug, $value = null)
     {
-        return $this->cells[$this->headerKey][$slug] = new Cell($value ?: $slug);
+        return $this->cells[$this->headerKey][$slug] = new Cell(is_null($value) ? $slug : $value);
     }
 
     /**
