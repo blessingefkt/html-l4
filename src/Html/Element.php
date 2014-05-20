@@ -206,7 +206,7 @@ class Element {
 	 */
 	public function setData($key, $value)
 	{
-		return $this->setAttr('data-'.$key, $value);
+		return $this->setAttr('data-' . $key, $value);
 	}
 
 	/**
@@ -216,7 +216,7 @@ class Element {
 	 */
 	public function getData($key, $default = null)
 	{
-		return $this->getAttr('data-'.$key, $default);
+		return $this->getAttr('data-' . $key, $default);
 	}
 
 

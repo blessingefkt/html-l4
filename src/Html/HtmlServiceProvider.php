@@ -2,31 +2,32 @@
 
 class HtmlServiceProvider extends \Illuminate\Html\HtmlServiceProvider {
 
-    protected function registerFormBuilder()
-    {
-        $this->app->bindShared('form', function ($app) {
-            $form = new FormBuilder($app['html'], $app['url'], $app['session.store']->getToken());
+	protected function registerFormBuilder()
+	{
+		$this->app->bindShared('form', function ($app)
+		{
+			$form = new FormBuilder($app['html'], $app['url'], $app['session.store']->getToken());
 
-            return $form->setSessionStore($app['session.store']);
-        });
+			return $form->setSessionStore($app['session.store']);
+		});
 
-    }
+	}
 
-    protected function registerHtmlBuilder()
-    {
-        $this->app->bindShared('html', function($app)
-        {
-            return new HtmlBuilder($app['url']);
-        });
+	protected function registerHtmlBuilder()
+	{
+		$this->app->bindShared('html', function ($app)
+		{
+			return new HtmlBuilder($app['url']);
+		});
 
-        $this->app->bindShared('breadcrumbs', function($app)
-        {
-            return new BreadCrumbs($app['html']);
-        });
-    }
+		$this->app->bindShared('breadcrumbs', function ($app)
+		{
+			return new BreadCrumbs($app['html']);
+		});
+	}
 
-    public function provides()
-    {
-        return ['html', 'form', 'breadcrumbs'];
-    }
+	public function provides()
+	{
+		return ['html', 'form', 'breadcrumbs'];
+	}
 } 
