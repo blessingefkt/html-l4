@@ -27,13 +27,16 @@ class Table extends BaseTable {
 	}
 
 	/**
+	 * @param array $items
 	 * @param null $label
 	 * @param array $attributes
 	 * @return \Iyoworks\Html\Tables\Table
 	 */
-	public static function make($label = null, array $attributes = [])
+	public static function make($items = null, $label = null, array $attributes = [])
 	{
-		return new static($label, $attributes);
+		$table = new static($label, $attributes);
+		if ($items) $table->setItems($items);
+		return $table;
 	}
 
 	/**
