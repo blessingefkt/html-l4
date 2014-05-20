@@ -41,7 +41,7 @@ class Element extends BaseElement {
 	 */
 	public function getAttributeString()
 	{
-		return \HTML::attributes($this->attributes);
+		return \HTML::attributes($this->getAttributes());
 	}
 
 	/**
