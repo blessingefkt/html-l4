@@ -200,6 +200,27 @@ class Element {
 	}
 
 	/**
+	 * @param $key
+	 * @param $value
+	 * @return $this
+	 */
+	public function setData($key, $value)
+	{
+		return $this->setAttr('data-'.$key, $value);
+	}
+
+	/**
+	 * @param $key
+	 * @param null $default
+	 * @return mixed
+	 */
+	public function getData($key, $default = null)
+	{
+		return $this->getAttr('data-'.$key, $default);
+	}
+
+
+	/**
 	 * Add a class
 	 * @param $class
 	 * @return $this
