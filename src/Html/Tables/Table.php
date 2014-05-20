@@ -41,7 +41,10 @@ class Table extends BaseTable {
 	 */
 	protected function buildTable()
 	{
-		call_user_func($this->builder, $this);
+		if ($this->builder)
+		{
+			call_user_func($this->builder, $this);
+		}
 		if ($this->rowBuilder)
 		{
 			foreach ($this->items as $key => $item)
