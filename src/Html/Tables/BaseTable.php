@@ -27,13 +27,6 @@ abstract class BaseTable extends Element implements \Countable {
 	 */
 	protected $emptyMsg = '<h1>Looks like there are no records to display.</h1>';
 
-	function __construct($label = null, array $attributes = array())
-	{
-		parent::__construct($label, $attributes);
-		$this->addClass('table table-striped');
-	}
-
-
 	abstract protected function buildTable();
 
 	/**
@@ -56,7 +49,9 @@ abstract class BaseTable extends Element implements \Countable {
 	public function cell($row, $column, $value)
 	{
 		if ($value instanceof Cell)
+		{
 			$cell = $value;
+		}
 		else
 		{
 			$cell = $this->makeCell($value);
@@ -83,7 +78,9 @@ abstract class BaseTable extends Element implements \Countable {
 	public function getCell($row, $column)
 	{
 		if (isset($this->cells[$row][$column]))
+		{
 			return $this->cells[$row][$column];
+		}
 		return $this->cell($row, $column, null);
 	}
 
@@ -102,18 +99,24 @@ abstract class BaseTable extends Element implements \Countable {
 		$this->buildTable();
 
 		if ($this->isEmpty() && isset($this->emptyMsg))
+		{
 			return $this->emptyMsg;
+		}
 
 		$html = null;
 		$cells = $this->cells;
 
 		if ($headers = $this->renderHeaders())
+		{
 			array_forget($cells, $this->headerKey);
+		}
 
 		$html = $this->renderCells($cells, array_get($this->cells, $this->headerKey, null));
 
 		if ($this->datatable)
+		{
 			$this->attributes['data-datatable'] = 'true';
+		}
 		return sprintf($this->format, $this->getAttributeString(),
 			 $headers,
 			 $html);
@@ -189,7 +192,9 @@ abstract class BaseTable extends Element implements \Countable {
 				foreach ($headers as $slug => $header)
 				{
 					if ($cell = array_get($columns, $slug, null))
+					{
 						$_html .= $cell->render();
+					}
 				}
 				$html .= $this->formatRow($_html, $this->rowAttrs);
 			}
