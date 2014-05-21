@@ -29,7 +29,7 @@ class FormBuilder extends \Illuminate\Html\FormBuilder {
 	 */
 	public function button($label = null, $atts = [])
 	{
-		return $this->html->button($label, $atts, 'button', true);
+		return $this->html->button($label, $atts, 'button', false);
 	}
 
 	/**
