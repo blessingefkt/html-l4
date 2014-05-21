@@ -75,7 +75,15 @@ class Table extends BaseTable {
 	{
 		foreach ($headers as $k => $header)
 		{
-			$this->header(is_int($k) ? Str::slug($header, '_') : $k, $header);
+			if ($header instanceof \Closure)
+			{
+				$headerCell = $this->header($k);
+				call_user_func($header, $headerCell);
+			}
+			else
+			{
+				$this->header(is_int($k) ? Str::slug($header, '_') : $k, $header);
+			}
 		}
 		return $this;
 	}
