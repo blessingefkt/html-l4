@@ -73,16 +73,17 @@ class Table extends BaseTable {
 	 */
 	public function setHeaders(array $headers)
 	{
-		foreach ($headers as $k => $header)
+		foreach ($headers as $slug => $header)
 		{
 			if ($header instanceof \Closure)
 			{
-				$headerCell = $this->header($k);
+				$headerCell = $this->header($slug);
 				call_user_func($header, $headerCell);
+				$this->cells[$this->headerKey][$slug] = $headerCell;
 			}
 			else
 			{
-				$this->header(is_int($k) ? Str::slug($header, '_') : $k, $header);
+				$this->header(is_int($slug) ? Str::slug($header, '_') : $slug, $header);
 			}
 		}
 		return $this;
