@@ -48,9 +48,8 @@ class Element extends BaseElement {
 	 * @param $label
 	 * @return $this|string
 	 */
-	public function label($label = null)
+	public function label($label)
 	{
-		if (!$label) return $this->label;
 		$this->label = $label;
 		return $this;
 	}
@@ -59,9 +58,8 @@ class Element extends BaseElement {
 	 * @param $format
 	 * @return $this|string
 	 */
-	public function format($format = null)
+	public function format($format)
 	{
-		if (!$format) return $this->format;
 		$this->format = $format;
 		return $this;
 	}

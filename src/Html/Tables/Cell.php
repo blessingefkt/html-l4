@@ -20,9 +20,8 @@ class Cell extends Element {
 	 * @param $tag
 	 * @return $this|string
 	 */
-	public function tag($tag = null)
+	public function tag($tag)
 	{
-		if (!$tag) return $this->tag;
 		$this->tag = $tag;
 		return $this;
 	}
