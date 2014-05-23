@@ -200,27 +200,6 @@ class Element {
 	}
 
 	/**
-	 * @param $key
-	 * @param $value
-	 * @return $this
-	 */
-	public function setData($key, $value)
-	{
-		return $this->setAttr('data-' . $key, $value);
-	}
-
-	/**
-	 * @param $key
-	 * @param null $default
-	 * @return mixed
-	 */
-	public function getData($key, $default = null)
-	{
-		return $this->getAttr('data-' . $key, $default);
-	}
-
-
-	/**
 	 * Add a class
 	 * @param $class
 	 * @return $this
@@ -242,16 +221,6 @@ class Element {
 			$this->attributes['class'] = array_unique($classes);
 		}
 		return $this;
-	}
-
-	/**
-	 * @param $class
-	 * @return bool
-	 */
-	public function hasClass($class)
-	{
-		$classes = (array)array_get($this->attributes, 'class', []);
-		return in_array($class, $classes);
 	}
 
 	/**
@@ -346,11 +315,18 @@ class Element {
 		{
 			$this->addClass($arguments);
 		}
+		elseif ($this->isProperty($name))
+		{
+			$this->setProperty($name, $arguments);
+		}
 		elseif (sizeof($arguments) == 1)
 		{
 			$this->setAttr($name, $arguments[0]);
 		}
-
+		else
+		{
+			$this->set($name, $arguments);
+		}
 		return $this;
 	}
 }
