@@ -315,17 +315,9 @@ class Element {
 		{
 			$this->addClass($arguments);
 		}
-		elseif ($this->isProperty($name))
-		{
-			$this->setProperty($name, $arguments);
-		}
 		elseif (sizeof($arguments) == 1)
 		{
-			$this->setAttr($name, $arguments[0]);
-		}
-		else
-		{
-			$this->set($name, $arguments);
+			$this->set($name, $arguments[0]);
 		}
 		return $this;
 	}
