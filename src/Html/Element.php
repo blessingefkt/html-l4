@@ -244,6 +244,15 @@ class Element {
 	}
 
 	/**
+	 * @param $class
+	 * @return bool
+	 */
+	public function hasClass($class)
+	{
+		return in_array($class, array_get($this->attributes, 'class', []));
+	}
+
+	/**
 	 * Remove a class
 	 * @param $class
 	 * @return $this
