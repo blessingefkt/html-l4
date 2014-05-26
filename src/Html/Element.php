@@ -200,6 +200,17 @@ class Element {
 	}
 
 	/**
+	 *
+	 * @param $key
+	 * @return $this
+	 */
+	public function removeAttr($key)
+	{
+		unset($this->attributes[$key]);
+		return $this;
+	}
+
+	/**
 	 * @param $k
 	 * @param $v
 	 * @return $this
@@ -217,6 +228,17 @@ class Element {
 	public function getData($k, $v)
 	{
 		return $this->getAttr('data-' . $k, $v);
+	}
+
+	/**
+	 *
+	 * @param $key
+	 * @return $this
+	 */
+	public function removeData($key)
+	{
+		unset($this->attributes['data-' . $key]);
+		return $this;
 	}
 
 	/**
