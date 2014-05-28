@@ -271,7 +271,8 @@ class Element {
 	 */
 	public function hasClass($class)
 	{
-		return in_array($class, array_get($this->attributes, 'class', []));
+		$classes = (array)array_get($this->attributes, 'class', []);
+		return in_array(trim($class), $classes);
 	}
 
 	/**
