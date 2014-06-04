@@ -21,7 +21,7 @@ abstract class BaseTable extends Element implements \Countable {
 	/**
 	 * @var bool
 	 */
-	protected $datatable = true;
+	protected $datatable = false;
 	/**
 	 * @var string
 	 */
@@ -118,8 +118,8 @@ abstract class BaseTable extends Element implements \Countable {
 			$this->attributes['data-datatable'] = 'true';
 		}
 		return sprintf($this->format, $this->getAttributeString(),
-			 $headers,
-			 $html);
+			$headers,
+			$html);
 	}
 
 	/**
@@ -208,6 +208,16 @@ abstract class BaseTable extends Element implements \Countable {
 			}
 		}
 		return $html;
+	}
+
+	/**
+	 * @param boolean $datatable
+	 * @return $this
+	 */
+	public function setDatatable($datatable)
+	{
+		$this->datatable = (bool)$datatable;
+		return $this;
 	}
 
 	/**
