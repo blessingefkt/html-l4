@@ -104,6 +104,7 @@ abstract class BaseTable extends Element implements \Countable {
 		}
 
 		$html = null;
+		$headers = null;
 		$cells = $this->cells;
 
 		if (!$this->skipHeaders)
@@ -188,7 +189,7 @@ abstract class BaseTable extends Element implements \Countable {
 		foreach ($cells as $row => $columns)
 		{
 			$_html = null;
-			if (!$this->skipHeaders && $headers)
+			if ($headers)
 			{
 				foreach ($headers as $slug => $header)
 				{
