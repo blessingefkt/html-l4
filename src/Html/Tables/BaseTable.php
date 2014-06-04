@@ -21,7 +21,7 @@ abstract class BaseTable extends Element implements \Countable {
 	/**
 	 * @var bool
 	 */
-	protected $datatable = false;
+	protected $datatable = false, $skipHeaders = false;
 	/**
 	 * @var string
 	 */
@@ -187,7 +187,7 @@ abstract class BaseTable extends Element implements \Countable {
 		foreach ($cells as $row => $columns)
 		{
 			$_html = null;
-			if ($headers)
+			if (!$this->skipHeaders && $headers)
 			{
 				foreach ($headers as $slug => $header)
 				{
@@ -211,10 +211,20 @@ abstract class BaseTable extends Element implements \Countable {
 	}
 
 	/**
+	 * @param boolean $skipHeaders
+	 * @return $this
+	 */
+	public function skipHeaders($skipHeaders = true)
+	{
+		$this->skipHeaders = (bool) $skipHeaders;
+		return $this;
+	}
+
+	/**
 	 * @param boolean $datatable
 	 * @return $this
 	 */
-	public function setDatatable($datatable)
+	public function setDatatable($datatable = true)
 	{
 		$this->datatable = (bool)$datatable;
 		return $this;
