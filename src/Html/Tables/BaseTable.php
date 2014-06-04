@@ -255,7 +255,9 @@ abstract class BaseTable extends Element implements \Countable {
 	 */
 	public function isEmpty()
 	{
-		return empty($this->cells);
+		$cells = $this->cells;
+		unset($cells[$this->headerKey]);
+		return empty($cells);
 	}
 
 	public function __toString()
