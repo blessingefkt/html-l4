@@ -106,9 +106,12 @@ abstract class BaseTable extends Element implements \Countable {
 		$html = null;
 		$cells = $this->cells;
 
-		if ($headers = $this->renderHeaders())
+		if (!$this->skipHeaders)
 		{
-			array_forget($cells, $this->headerKey);
+			if ($headers = $this->renderHeaders())
+			{
+				array_forget($cells, $this->headerKey);
+			}
 		}
 
 		$html = $this->renderCells($cells, array_get($this->cells, $this->headerKey, null));
@@ -117,9 +120,7 @@ abstract class BaseTable extends Element implements \Countable {
 		{
 			$this->attributes['data-datatable'] = 'true';
 		}
-		return sprintf($this->format, $this->getAttributeString(),
-			$headers,
-			$html);
+		return sprintf($this->format, $this->getAttributeString(), $headers, $html);
 	}
 
 	/**
@@ -216,7 +217,7 @@ abstract class BaseTable extends Element implements \Countable {
 	 */
 	public function skipHeaders($skipHeaders = true)
 	{
-		$this->skipHeaders = (bool) $skipHeaders;
+		$this->skipHeaders = (bool)$skipHeaders;
 		return $this;
 	}
 
