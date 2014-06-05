@@ -109,20 +109,21 @@ abstract class BaseTable extends Element implements \Countable {
 		}
 
 
-		if ($this->isEmpty() && isset($this->emptyMsg))
+		if ($this->isEmpty())
 		{
-			$cells = [$this->getEmptyMsgCell()];
+			$html = $this->getEmptyMsgCell()->render();
 		}
 		else
 		{
 			$cells = $this->cells;
+			$html = $this->renderCells($cells, $this->getHeaderCells());
 		}
-		$html = $this->renderCells($cells, $this->getHeaderCells());
 
 		if ($this->datatable)
 		{
 			$this->attributes['data-datatable'] = 'true';
 		}
+
 		return sprintf($this->format, $this->getAttributeString(), $headers, $html);
 	}
 
