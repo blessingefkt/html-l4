@@ -27,6 +27,8 @@ abstract class BaseTable extends Element implements \Countable {
 	 */
 	protected $emptyMsg = '<h1>Looks like there are no records to display.</h1>';
 
+	protected $emptyMessageCallback;
+
 	abstract protected function buildTable();
 
 	/**
@@ -98,23 +100,23 @@ abstract class BaseTable extends Element implements \Countable {
 	{
 		$this->buildTable();
 
-		if ($this->isEmpty() && isset($this->emptyMsg))
-		{
-			return $this->emptyMsg;
-		}
-
 		$html = null;
 		$headers = null;
-		$cells = $this->cells;
 
 		if (!$this->skipHeaders)
 		{
-			if ($headers = $this->renderHeaders())
-			{
-				array_forget($cells, $this->headerKey);
-			}
+			$headers = $this->renderHeaders();
 		}
 
+
+		if ($this->isEmpty() && isset($this->emptyMsg))
+		{
+			$cells = [$this->getEmptyMsgCell()];
+		}
+		else
+		{
+			$cells = $this->cells;
+		}
 		$html = $this->renderCells($cells, array_get($this->cells, $this->headerKey, null));
 
 		if ($this->datatable)
@@ -188,6 +190,7 @@ abstract class BaseTable extends Element implements \Countable {
 		$html = null;
 		foreach ($cells as $row => $columns)
 		{
+			if ($row == $this->headerKey) continue;
 			$_html = null;
 			if ($headers)
 			{
@@ -210,6 +213,20 @@ abstract class BaseTable extends Element implements \Countable {
 			}
 		}
 		return $html;
+	}
+
+	/**
+	 * @param null $msg
+	 * @return Cell
+	 */
+	public function getEmptyMsgCell($msg = null)
+	{
+		$cell = new Cell($msg ? : $this->emptyMsg, ['colspan' => $this->headerCount()]);
+		if (isset($this->emptyMessageCallback))
+		{
+			call_user_func($this->emptyMessageCallback, $cell);
+		}
+		return $cell;
 	}
 
 	/**
@@ -251,6 +268,15 @@ abstract class BaseTable extends Element implements \Countable {
 	}
 
 	/**
+	 * @return int
+	 */
+	public function headerCount()
+	{
+		$headerCells = array_get($this->cells, $this->headerKey, []);
+		return count($headerCells, COUNT_RECURSIVE);
+	}
+
+	/**
 	 * @return bool
 	 */
 	public function isEmpty()
@@ -258,6 +284,16 @@ abstract class BaseTable extends Element implements \Countable {
 		$cells = $this->cells;
 		unset($cells[$this->headerKey]);
 		return empty($cells);
+	}
+
+	/**
+	 * @param callable $emptyMessageCallback
+	 * @return $this
+	 */
+	public function setEmptyMsgCallback(callable $emptyMessageCallback)
+	{
+		$this->emptyMessageCallback = $emptyMessageCallback;
+		return $this;
 	}
 
 	public function __toString()
