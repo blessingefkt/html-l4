@@ -117,7 +117,7 @@ abstract class BaseTable extends Element implements \Countable {
 		{
 			$cells = $this->cells;
 		}
-		$html = $this->renderCells($cells, array_get($this->cells, $this->headerKey, null));
+		$html = $this->renderCells($cells, $this->getHeaderCells());
 
 		if ($this->datatable)
 		{
@@ -134,6 +134,14 @@ abstract class BaseTable extends Element implements \Countable {
 	protected function formatRow($str, $attributes = null)
 	{
 		return sprintf('<tr %s>%s</tr>', $this->makeAttrString($attributes), $str);
+	}
+
+	/**
+	 * @return Cell[]
+	 */
+	public function getHeaderCells()
+	{
+		return array_get($this->cells, $this->headerKey, []);
 	}
 
 	/**
@@ -192,7 +200,7 @@ abstract class BaseTable extends Element implements \Countable {
 		{
 			if ($row == $this->headerKey) continue;
 			$_html = null;
-			if ($headers)
+			if (!empty($headers))
 			{
 				foreach ($headers as $slug => $header)
 				{
@@ -272,8 +280,7 @@ abstract class BaseTable extends Element implements \Countable {
 	 */
 	public function headerCount()
 	{
-		$headerCells = array_get($this->cells, $this->headerKey, []);
-		return count($headerCells, COUNT_RECURSIVE);
+		return count($this->getHeaderCells(), COUNT_RECURSIVE);
 	}
 
 	/**
