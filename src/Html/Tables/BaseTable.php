@@ -108,15 +108,13 @@ abstract class BaseTable extends Element implements \Countable {
 			$headers = $this->renderHeaders();
 		}
 
-
 		if ($this->isEmpty())
 		{
 			$html = $this->getEmptyMsgCell()->render();
 		}
 		else
 		{
-			$cells = $this->cells;
-			$html = $this->renderCells($cells, $this->getHeaderCells());
+			$html = $this->renderCells($this->getBodyCells(), $this->getHeaderCells());
 		}
 
 		if ($this->datatable)
@@ -143,6 +141,16 @@ abstract class BaseTable extends Element implements \Countable {
 	public function getHeaderCells()
 	{
 		return array_get($this->cells, $this->headerKey, []);
+	}
+
+	/**
+	 * @return Cell[]
+	 */
+	public function getBodyCells()
+	{
+		$cells = $this->cells;
+		array_forget($cells, $this->headerKey);
+		return $cells;
 	}
 
 	/**
@@ -199,7 +207,6 @@ abstract class BaseTable extends Element implements \Countable {
 		$html = null;
 		foreach ($cells as $row => $columns)
 		{
-			if ($row == $this->headerKey) continue;
 			$_html = null;
 			if (!empty($headers))
 			{
@@ -289,9 +296,11 @@ abstract class BaseTable extends Element implements \Countable {
 	 */
 	public function isEmpty()
 	{
-		$cells = $this->cells;
-		unset($cells[$this->headerKey]);
-		return empty($cells);
+		foreach ($this->getBodyCells() as $row => $columns)
+		{
+			if (!empty($columns)) return false;
+		}
+		return true;
 	}
 
 	/**
