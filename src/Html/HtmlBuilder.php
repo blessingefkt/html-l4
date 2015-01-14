@@ -58,7 +58,11 @@ class HtmlBuilder extends \Illuminate\Html\HtmlBuilder {
 			$attributes['data-submit'] = $url;
 		}
 
-		return '<a href="' . $url . '"' . $this->attributes($attributes) . '>' . $icon . $this->entities($title) . '</a>';
+		$prepend = array_pull($attributes, 'prepend');
+		$append = array_pull($attributes, 'append');
+
+		return '<a href="' . $url . '"' . $this->attributes($attributes) . '>' . $prepend .
+		$icon . $this->entities($title) . $append. '</a>';
 	}
 
 	/**
@@ -72,7 +76,9 @@ class HtmlBuilder extends \Illuminate\Html\HtmlBuilder {
 	{
 		$atts = $this->parseAtts($atts, 'btn btn-sm');
 		if ($icon = array_pull($atts, 'icon'))
+		{
 			$icon = "<i class=\"fa {$icon}\"></i> ";
+		}
 		if ($submit) $atts['type'] = 'submit';
 		return sprintf("<%s%s>%s%s</%s>", $tag, $this->attributes($atts), $icon, $label, $tag);
 	}
@@ -145,14 +151,20 @@ class HtmlBuilder extends \Illuminate\Html\HtmlBuilder {
 	public function parseAtts($atts, $default = null)
 	{
 		if (is_null($atts))
+		{
 			$atts['class'] = $default;
+		}
 		elseif (is_string($atts))
+		{
 			$atts = ['class' => $atts];
+		}
 		else
 		{
 			$atts = (array)$atts;
 			if (!array_key_exists('class', $atts))
+			{
 				$atts['class'] = $default;
+			}
 		}
 		return $atts;
 	}
