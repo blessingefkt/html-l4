@@ -19,20 +19,21 @@ class BreadCrumbs {
 	/**
 	 * @param $title
 	 * @param null $url
+	 * @param array $attributes
 	 * @return $this
 	 */
-	public function add($title, $url = null)
+	public function add($title, $url = null, array $attributes = [])
 	{
 		if (is_array($title))
 		{
 			foreach ($title as $_title => $_url)
 			{
-				$this->crumbs[] = [$_title, $_url];
+				$this->crumbs[] = [$_title, $_url, $attributes];
 			}
 		}
 		else
 		{
-			$this->crumbs[] = [$title, $url];
+			$this->crumbs[] = [$title, $url, $attributes];
 		}
 		return $this;
 	}
@@ -45,8 +46,8 @@ class BreadCrumbs {
 		$crumbs = '';
 		foreach ($this->crumbs as $crumb)
 		{
-			list($title, $url) = $crumb;
-			if ($url) $title = $this->builder->link($url, $title);
+			list($title, $url, $attributes) = $crumb;
+			if ($url) $title = $this->builder->link($url, $title, $attributes);
 			$crumbs .= "<span>{$title}</span>";
 		}
 		return $crumbs;
