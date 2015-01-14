@@ -9,7 +9,7 @@
     ],
     "require": {
         "php": ">=5.4.0",
-        "iyoworks/support": "1.*",
+        "iyoworks/support": "~1",
         "illuminate/html": ">=4.0"
     },
     "autoload": {
